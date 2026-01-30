@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# Vendored third-party code
+third_party/** linguist-vendored
+
+# Xcode project files
+*.pbxproj text
