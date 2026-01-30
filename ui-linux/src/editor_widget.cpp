@@ -358,6 +358,15 @@ void prodigeetor_editor_widget_set_text(GtkWidget *widget, const char *text) {
   gtk_widget_queue_draw(widget);
 }
 
+char *prodigeetor_editor_widget_get_text(GtkWidget *widget) {
+  auto *state = static_cast<EditorState *>(g_object_get_data(G_OBJECT(widget), "editor-state"));
+  if (!state) {
+    return g_strdup("");
+  }
+  std::string text = state->buffer.text();
+  return g_strdup(text.c_str());
+}
+
 void prodigeetor_editor_widget_set_file_path(GtkWidget *widget, const char *path) {
   auto *state = static_cast<EditorState *>(g_object_get_data(G_OBJECT(widget), "editor-state"));
   if (!state || !path) {

@@ -23,10 +23,10 @@ EditorSettings SettingsLoader::load_from_file(const std::string &path) {
     return settings;
   }
 
-  std::regex font_regex(R"("fontFamily"\s*:\s*"([^"]+)")");
-  std::regex size_regex(R"("fontSize"\s*:\s*([0-9]+(\.[0-9]+)?)")");
-  std::regex liga_regex(R"("fontLigatures"\s*:\s*(true|false))");
-  std::regex fallback_regex(R"("fontFallbacks"\s*:\s*\[([^\]]*)\])");
+  std::regex font_regex(R"regex("fontFamily"\s*:\s*"([^"]+)")regex");
+  std::regex size_regex(R"regex("fontSize"\s*:\s*([0-9]+(\.[0-9]+)?)")regex");
+  std::regex liga_regex(R"regex("fontLigatures"\s*:\s*(true|false))regex");
+  std::regex fallback_regex(R"regex("fontFallbacks"\s*:\s*\[([^\]]*)\])regex");
 
   std::smatch match;
   if (std::regex_search(content, match, font_regex)) {
@@ -41,7 +41,7 @@ EditorSettings SettingsLoader::load_from_file(const std::string &path) {
   if (std::regex_search(content, match, fallback_regex)) {
     settings.font_fallbacks.clear();
     std::string list = match[1].str();
-    std::regex item_regex(R"("([^"]+)")");
+    std::regex item_regex(R"regex("([^"]+)")regex");
     auto begin = std::sregex_iterator(list.begin(), list.end(), item_regex);
     auto end = std::sregex_iterator();
     for (auto it = begin; it != end; ++it) {

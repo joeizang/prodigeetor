@@ -41,7 +41,7 @@ SyntaxTheme SyntaxTheme::load_from_file(const std::string &path) {
   buffer << file.rdbuf();
   std::string content = buffer.str();
 
-  std::regex pair_regex(R"("([^"]+)"\s*:\s*"(#?[0-9a-fA-F]{6,8})")");
+  std::regex pair_regex(R"regex("([^"]+)"\s*:\s*"(#?[0-9a-fA-F]{6,8})")regex");
   auto begin = std::sregex_iterator(content.begin(), content.end(), pair_regex);
   auto end = std::sregex_iterator();
 

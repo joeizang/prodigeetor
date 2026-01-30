@@ -7,6 +7,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)init;
 - (void)initializeCore;
 - (void)setText:(NSString *)text;
+- (NSString *)getText;
 - (NSInteger)lineCount;
 - (NSString *)lineTextAt:(NSInteger)lineIndex;
 - (NSInteger)lineGraphemeCount:(NSInteger)lineIndex;

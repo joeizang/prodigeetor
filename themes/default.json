@@ -1,14 +1,14 @@
 {
-  "name": "Nord Dark",
+  "name": "YukiNord Dark",
   "captures": {
-    "string": "#A3BE8C",
+    "string": "#a3be8c",
     "comment": "#616E88",
-    "keyword": "#81A1C1",
-    "number": "#B48EAD",
-    "function": "#88C0D0",
-    "property": "#8FBCBB",
-    "constant": "#D08770",
-    "variable": "#D8DEE9",
-    "type": "#8FBCBB"
+    "keyword": "#81a1c1",
+    "number": "#b48ead",
+    "function": "#88c0d0",
+    "property": "#88c0d0",
+    "constant": "#d08770",
+    "variable": "#d8dee9",
+    "type": "#81a1c1"
   }
 }

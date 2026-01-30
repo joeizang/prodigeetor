@@ -12,6 +12,7 @@
     00A111111111111111111113 /* CoreBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000003 /* CoreBridge.mm */; };
     00A111111111111111111114 /* CoreTextRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000007 /* CoreTextRenderer.mm */; };
     00A111111111111111111115 /* EditorView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000009 /* EditorView.mm */; };
+    00A111111111111111111116 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A00000000000000000000B /* main.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
     00A000000000000000000008 /* CoreTextRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreTextRenderer.h; sourceTree = "<group>"; };
     00A000000000000000000009 /* EditorView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorView.mm; sourceTree = "<group>"; };
     00A00000000000000000000A /* EditorView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EditorView.h; sourceTree = "<group>"; };
+    00A00000000000000000000B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +70,7 @@
       isa = PBXGroup;
       children = (
         00A000000000000000000001 /* AppDelegate.swift */,
+        00A00000000000000000000B /* main.swift */,
         00A000000000000000000002 /* MainViewController.swift */,
         00A000000000000000000006 /* Info.plist */,
         00A333333333333333333336 /* Bridge */,
@@ -154,6 +157,7 @@
       buildActionMask = 2147483647;
       files = (
         00A111111111111111111111 /* AppDelegate.swift in Sources */,
+        00A111111111111111111116 /* main.swift in Sources */,
         00A111111111111111111112 /* MainViewController.swift in Sources */,
         00A111111111111111111113 /* CoreBridge.mm in Sources */,
         00A111111111111111111114 /* CoreTextRenderer.mm in Sources */,
@@ -185,6 +189,16 @@
         );
         MACOSX_DEPLOYMENT_TARGET = 13.0;
         OTHER_LDFLAGS = (
+          "-ltree_sitter",
+          "-ltree_sitter_c_sharp",
+          "-ltree_sitter_css",
+          "-ltree_sitter_html",
+          "-ltree_sitter_javascript",
+          "-ltree_sitter_sql",
+          "-ltree_sitter_swift",
+          "-ltree_sitter_tsx",
+          "-ltree_sitter_typescript",
+          "-lutf8proc",
           "-lprodigeetor_core",
         );
         PRODUCT_BUNDLE_IDENTIFIER = com.prodigeetor.editor;
@@ -215,6 +229,16 @@
         );
         MACOSX_DEPLOYMENT_TARGET = 13.0;
         OTHER_LDFLAGS = (
+          "-ltree_sitter",
+          "-ltree_sitter_c_sharp",
+          "-ltree_sitter_css",
+          "-ltree_sitter_html",
+          "-ltree_sitter_javascript",
+          "-ltree_sitter_sql",
+          "-ltree_sitter_swift",
+          "-ltree_sitter_tsx",
+          "-ltree_sitter_typescript",
+          "-lutf8proc",
           "-lprodigeetor_core",
         );
         PRODUCT_BUNDLE_IDENTIFIER = com.prodigeetor.editor;

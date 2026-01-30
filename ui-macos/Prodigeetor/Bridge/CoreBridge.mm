@@ -36,6 +36,14 @@
   _core->set_text(std::move(value));
 }
 
+- (NSString *)getText {
+  if (!_core) {
+    return @"";
+  }
+  std::string text = _core->buffer().text();
+  return [NSString stringWithUTF8String:text.c_str()];
+}
+
 - (NSInteger)lineCount {
   if (!_core) {
     return 0;

@@ -9,6 +9,24 @@
 #include "syntax_highlighter.h"
 #include "theme.h"
 
+// Helper function to resolve resource paths from bundle or working directory
+static std::string resolveResourcePath(NSString *relativePath) {
+  // First try to load from app bundle Resources
+  NSString *filename = [relativePath lastPathComponent];
+  NSString *directory = [relativePath stringByDeletingLastPathComponent];
+
+  NSString *bundlePath = [[NSBundle mainBundle] pathForResource:[filename stringByDeletingPathExtension]
+                                                          ofType:[filename pathExtension]
+                                                     inDirectory:directory];
+
+  if (bundlePath && [[NSFileManager defaultManager] fileExistsAtPath:bundlePath]) {
+    return std::string([bundlePath UTF8String]);
+  }
+
+  // Fall back to working directory (for development)
+  return std::string([relativePath UTF8String]);
+}
+
 @interface EditorView ()
 @property (nonatomic, strong) CoreBridge *coreBridge;
 @end
@@ -28,6 +46,10 @@
   NSString *_themePath;
   NSDate *_themeLastModified;
   NSTimer *_themeTimer;
+  NSTimer *_displayTimer;
+  NSDate *_lastBlink;
+  NSTimeInterval _blinkInterval;
+  BOOL _caretVisible;
   prodigeetor::EditorSettings _settings;
 }
 
@@ -35,7 +57,8 @@
   self = [super initWithFrame:frameRect];
   if (self) {
     _coreBridge = coreBridge;
-    _settings = prodigeetor::SettingsLoader::load_from_file("settings/default.json");
+    std::string settingsPath = resolveResourcePath(@"settings/default.json");
+    _settings = prodigeetor::SettingsLoader::load_from_file(settingsPath);
     _fontFamily = [NSString stringWithUTF8String:_settings.font_family.c_str()];
     _fontSize = 14.0;
     _cursorOffset = 0;
@@ -45,6 +68,9 @@
     _isDragging = NO;
     _scrollOffsetY = 0.0;
     [self setWantsLayer:YES];
+    _blinkInterval = 0.5;
+    _caretVisible = YES;
+    _lastBlink = [NSDate date];
 
     _themePath = @"themes/default.json";
     [self reloadThemeIfNeeded:YES];
@@ -58,6 +84,13 @@
     _renderer.set_font_stack(families, _settings.font_size);
     _renderer.set_ligatures(_settings.font_ligatures);
     _fontSize = _settings.font_size;
+
+    // Set initial frame size if needed
+    if (NSEqualRects(frameRect, NSZeroRect)) {
+      self.frame = NSMakeRect(0, 0, 800, 600);
+    }
+
+    [self setNeedsDisplay:YES];
   }
   return self;
 }
@@ -73,6 +106,46 @@
 - (void)dealloc {
   [_themeTimer invalidate];
   _themeTimer = nil;
+  [_displayTimer invalidate];
+  _displayTimer = nil;
+  [super dealloc];
+}
+
+- (void)viewDidMoveToWindow {
+  [super viewDidMoveToWindow];
+  if (self.window) {
+    [self startDisplayLoop];
+  } else {
+    [self stopDisplayLoop];
+  }
+}
+
+- (void)startDisplayLoop {
+  if (_displayTimer) {
+    return;
+  }
+  _displayTimer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60.0)
+                                                   target:self
+                                                 selector:@selector(onDisplayTick)
+                                                    repeats:YES
+                                                   userInfo:nil];
+}
+
+- (void)stopDisplayLoop {
+  [_displayTimer invalidate];
+  _displayTimer = nil;
+}
+
+- (void)onDisplayTick {
+  if (!self.window) {
+    return;
+  }
+  NSDate *now = [NSDate date];
+  if ([now timeIntervalSinceDate:_lastBlink] >= _blinkInterval) {
+    _caretVisible = !_caretVisible;
+    _lastBlink = now;
+  }
+  [self setNeedsDisplay:YES];
 }
 
 - (void)setEditorFont:(NSString *)family size:(CGFloat)size {
@@ -135,7 +208,8 @@
     return;
   }
   _themeLastModified = modified;
-  prodigeetor::SyntaxTheme theme = prodigeetor::SyntaxTheme::load_from_file([expanded UTF8String]);
+  std::string themePath = resolveResourcePath(_themePath);
+  prodigeetor::SyntaxTheme theme = prodigeetor::SyntaxTheme::load_from_file(themePath);
   _highlighter.set_theme(std::move(theme));
   [self setNeedsDisplay:YES];
 
@@ -373,6 +447,12 @@
 }
 
 - (void)drawCaretForLine:(NSInteger)lineIndex lineText:(NSString *)line y:(CGFloat)y {
+  if (!_caretVisible) {
+    return;
+  }
+  if (self.window.firstResponder != self) {
+    return;
+  }
   NSArray<NSNumber *> *pos = [self.coreBridge positionAtOffset:_cursorOffset];
   if (pos[0].integerValue != lineIndex) {
     return;
@@ -387,6 +467,10 @@
 
 - (void)drawRect:(NSRect)dirtyRect {
   [super drawRect:dirtyRect];
+
+  // Draw background - YukiNord background color #1D2129
+  [[NSColor colorWithRed:0.114 green:0.129 blue:0.161 alpha:1.0] setFill];
+  NSRectFill(dirtyRect);
 
   CGContextRef context = [[NSGraphicsContext currentContext] CGContext];
   if (!context) {
