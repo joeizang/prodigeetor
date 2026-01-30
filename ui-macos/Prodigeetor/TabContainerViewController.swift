@@ -299,4 +299,18 @@ final class TabContainerViewController: NSViewController {
     guard let activeId = activeTabId else { return nil }
     return editors[activeId]
   }
+
+  // MARK: - LSP Support
+
+  func tickAllEditors() {
+    for (_, editor) in editors {
+      editor.tick()
+    }
+  }
+
+  func initializeLSPForAllEditors(workspacePath: String) {
+    for (_, editor) in editors {
+      editor.initializeLSP(workspacePath: workspacePath)
+    }
+  }
 }

@@ -3,6 +3,7 @@
 #include "core.h"
 
 #include <memory>
+#include <string>
 
 @interface CoreBridge () {
   std::unique_ptr<prodigeetor::Core> _core;
@@ -23,6 +24,45 @@
   if (_core) {
     _core->initialize();
   }
+}
+
+- (void)initializeLSPWithWorkspace:(NSString *)workspacePath {
+  if (!_core) {
+    return;
+  }
+  std::string path = std::string([workspacePath UTF8String]);
+  _core->initialize_lsp(path);
+}
+
+- (void)tick {
+  if (_core) {
+    _core->tick();
+  }
+}
+
+- (void)openFile:(NSString *)uri languageId:(NSString *)languageId {
+  if (!_core) {
+    return;
+  }
+  std::string uriStr = std::string([uri UTF8String]);
+  std::string langStr = std::string([languageId UTF8String]);
+  _core->open_file(uriStr, langStr);
+}
+
+- (void)closeFile:(NSString *)uri {
+  if (!_core) {
+    return;
+  }
+  std::string uriStr = std::string([uri UTF8String]);
+  _core->close_file(uriStr);
+}
+
+- (void)saveFile:(NSString *)uri {
+  if (!_core) {
+    return;
+  }
+  std::string uriStr = std::string([uri UTF8String]);
+  _core->save_file(uriStr);
 }
 
 - (void)setText:(NSString *)text {

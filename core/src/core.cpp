@@ -1,11 +1,44 @@
 #include "core.h"
+#include <string>
 
 namespace prodigeetor {
 
-Core::Core() = default;
+Core::Core() : m_lsp_manager(std::make_unique<lsp::LSPManager>()) {}
+
+Core::~Core() = default;
 
 void Core::initialize() {
-  // Placeholder for core initialization
+  // Setup default language servers
+  // These paths would typically be configured via settings
+}
+
+void Core::initialize_lsp(const std::string& root_path) {
+  // Register TypeScript/JavaScript language server
+  lsp::LanguageServerConfig tsConfig;
+  tsConfig.command = "typescript-language-server";
+  tsConfig.args = {"--stdio"};
+  tsConfig.extensions = {".ts", ".tsx", ".js", ".jsx"};
+  tsConfig.languageId = "typescript";
+  m_lsp_manager->registerLanguageServer("typescript", tsConfig);
+
+  // Register HTML language server
+  lsp::LanguageServerConfig htmlConfig;
+  htmlConfig.command = "vscode-html-language-server";
+  htmlConfig.args = {"--stdio"};
+  htmlConfig.extensions = {".html", ".htm"};
+  htmlConfig.languageId = "html";
+  m_lsp_manager->registerLanguageServer("html", htmlConfig);
+
+  // Register CSS language server
+  lsp::LanguageServerConfig cssConfig;
+  cssConfig.command = "vscode-css-language-server";
+  cssConfig.args = {"--stdio"};
+  cssConfig.extensions = {".css", ".scss", ".less"};
+  cssConfig.languageId = "css";
+  m_lsp_manager->registerLanguageServer("css", cssConfig);
+
+  // Initialize all servers
+  m_lsp_manager->initializeServers("file://" + root_path);
 }
 
 TextBuffer &Core::buffer() {
@@ -79,6 +112,39 @@ Position Core::position_at(size_t offset) const {
 
 size_t Core::offset_at(const Position &pos) const {
   return m_buffer.offset_at(pos);
+}
+
+lsp::LSPManager &Core::lsp_manager() {
+  return *m_lsp_manager;
+}
+
+const lsp::LSPManager &Core::lsp_manager() const {
+  return *m_lsp_manager;
+}
+
+TreeSitterHighlighter &Core::syntax_highlighter() {
+  return m_syntax_highlighter;
+}
+
+const TreeSitterHighlighter &Core::syntax_highlighter() const {
+  return m_syntax_highlighter;
+}
+
+void Core::open_file(const std::string& uri, const std::string& language_id) {
+  std::string text = m_buffer.text();
+  m_lsp_manager->didOpen(uri, language_id, text);
+}
+
+void Core::close_file(const std::string& uri) {
+  m_lsp_manager->didClose(uri);
+}
+
+void Core::save_file(const std::string& uri) {
+  m_lsp_manager->didSave(uri);
+}
+
+void Core::tick() {
+  m_lsp_manager->processMessages();
 }
 
 } // namespace prodigeetor

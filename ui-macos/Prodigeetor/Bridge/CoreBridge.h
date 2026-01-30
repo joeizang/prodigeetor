@@ -6,6 +6,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)init;
 - (void)initializeCore;
+- (void)initializeLSPWithWorkspace:(NSString *)workspacePath;
+- (void)tick;
+- (void)openFile:(NSString *)uri languageId:(NSString *)languageId;
+- (void)closeFile:(NSString *)uri;
+- (void)saveFile:(NSString *)uri;
 - (void)setText:(NSString *)text;
 - (NSString *)getText;
 - (NSInteger)lineCount;

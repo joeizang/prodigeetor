@@ -62,6 +62,9 @@ final class EditorViewController: NSViewController {
     editorView?.scrollToTop()
     onTitleChanged?(displayName)
     onDirtyStateChanged?(isDirty)
+
+    // Notify LSP about opened file
+    notifyLSPFileOpened()
   }
 
   /// Load content with explicit text (for new files)
@@ -95,6 +98,9 @@ final class EditorViewController: NSViewController {
     editorView?.setFilePath(path)
     onTitleChanged?(displayName)
     onDirtyStateChanged?(isDirty)
+
+    // Notify LSP about saved file
+    notifyLSPFileSaved()
   }
 
   /// Show save panel and save
@@ -143,6 +149,53 @@ final class EditorViewController: NSViewController {
 
   func hasUnsavedChanges() -> Bool {
     return isDirty
+  }
+
+  // MARK: - LSP Support
+
+  func initializeLSP(workspacePath: String) {
+    coreBridge.initializeLSP(withWorkspace: workspacePath)
+  }
+
+  func tick() {
+    coreBridge.tick()
+  }
+
+  private func detectLanguageId(for path: String) -> String {
+    let ext = (path as NSString).pathExtension.lowercased()
+    switch ext {
+    case "ts": return "typescript"
+    case "tsx": return "typescriptreact"
+    case "js": return "javascript"
+    case "jsx": return "javascriptreact"
+    case "html", "htm": return "html"
+    case "css": return "css"
+    case "scss": return "scss"
+    case "less": return "less"
+    case "swift": return "swift"
+    case "cs": return "csharp"
+    case "sql": return "sql"
+    default: return "plaintext"
+    }
+  }
+
+  private func notifyLSPFileOpened() {
+    guard let filePath = currentFilePath else { return }
+    let uri = "file://\(filePath)"
+    let languageId = detectLanguageId(for: filePath)
+    coreBridge.openFile(uri, languageId: languageId)
+  }
+
+  private func notifyLSPFileClosed() {
+    guard let filePath = currentFilePath else { return }
+    let uri = "file://\(filePath)"
+    coreBridge.closeFile(uri)
+  }
+
+  private func notifyLSPFileSaved() {
+    guard let filePath = currentFilePath else { return }
+    let uri = "file://\(filePath)"
+    coreBridge.saveFile(uri)
   }
 }
 

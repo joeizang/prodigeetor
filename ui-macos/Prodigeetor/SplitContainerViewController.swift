@@ -119,4 +119,18 @@ final class SplitContainerViewController: NSSplitViewController {
   func selectTab(at index: Int) {
     getActiveSplitPane()?.selectTab(at: index)
   }
+
+  // MARK: - LSP Support
+
+  func tickAllEditors() {
+    for tabContainer in tabContainers {
+      tabContainer.tickAllEditors()
+    }
+  }
+
+  func initializeLSPForAllEditors(workspacePath: String) {
+    for tabContainer in tabContainers {
+      tabContainer.initializeLSPForAllEditors(workspacePath: workspacePath)
+    }
+  }
 }

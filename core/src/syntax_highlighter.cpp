@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <string>
 
 #ifdef PRODIGEETOR_USE_TREE_SITTER
 #include <tree_sitter/api.h>
@@ -20,6 +21,8 @@ extern "C" const TSLanguage *tree_sitter_sql();
 
 namespace prodigeetor {
 
+static std::string g_resource_base_path;
+
 static std::string read_file(const std::string &path) {
   std::ifstream file(path);
   if (!file.is_open()) {
@@ -30,8 +33,34 @@ static std::string read_file(const std::string &path) {
   return buffer.str();
 }
 
+static std::string resolve_query_path(const std::string &relative_path) {
+  // Try multiple locations in order of preference
+  std::vector<std::string> search_paths;
+
+  // 1. User-configured base path
+  if (!g_resource_base_path.empty()) {
+    search_paths.push_back(g_resource_base_path + "/" + relative_path);
+  }
+
+  // 2. Relative to current directory
+  search_paths.push_back(relative_path);
+
+  // 3. Common development locations
+  search_paths.push_back("/Users/josephizang/Projects/vibes/codeeditor/" + relative_path);
+
+  for (const auto &path : search_paths) {
+    if (std::filesystem::exists(path)) {
+      return path;
+    }
+  }
+
+  return std::string();
+}
+
 static std::string query_for_language(TreeSitterHighlighter::LanguageId language) {
   std::vector<std::string> candidates;
+  std::string base_query;
+
   switch (language) {
     case TreeSitterHighlighter::LanguageId::JavaScript:
       candidates = {
@@ -39,16 +68,17 @@ static std::string query_for_language(TreeSitterHighlighter::LanguageId language
       };
       break;
     case TreeSitterHighlighter::LanguageId::TypeScript:
-      candidates = {
-        "third_party/tree-sitter-typescript/queries/highlights.scm",
-        "third_party/tree-sitter-typescript/queries/ts/highlights.scm"
-      };
-      break;
     case TreeSitterHighlighter::LanguageId::TSX:
-      candidates = {
-        "third_party/tree-sitter-typescript/queries/highlights.scm",
-        "third_party/tree-sitter-typescript/queries/tsx/highlights.scm"
-      };
+      // TypeScript queries extend JavaScript, so we need to load both
+      {
+        std::string js_path = resolve_query_path("third_party/tree-sitter-javascript/queries/highlights.scm");
+        if (!js_path.empty()) {
+          base_query = read_file(js_path);
+        }
+        candidates = {
+          "third_party/tree-sitter-typescript/queries/highlights.scm"
+        };
+      }
       break;
     case TreeSitterHighlighter::LanguageId::Swift:
       candidates = {
@@ -77,11 +107,24 @@ static std::string query_for_language(TreeSitterHighlighter::LanguageId language
       break;
   }
 
-  for (const auto &path : candidates) {
-    if (std::filesystem::exists(path)) {
-      return read_file(path);
+  std::string extension_query;
+  for (const auto &relative_path : candidates) {
+    std::string resolved = resolve_query_path(relative_path);
+    if (!resolved.empty()) {
+      extension_query = read_file(resolved);
+      break;
     }
   }
+
+  // Merge base and extension queries
+  if (!base_query.empty() && !extension_query.empty()) {
+    return base_query + "\n\n" + extension_query;
+  } else if (!extension_query.empty()) {
+    return extension_query;
+  } else if (!base_query.empty()) {
+    return base_query;
+  }
+
   return std::string();
 }
 

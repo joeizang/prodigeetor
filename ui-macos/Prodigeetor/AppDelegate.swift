@@ -3,6 +3,8 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
   private var window: NSWindow?
   private var splitContainerViewController: SplitContainerViewController?
+  private var lspTickTimer: Timer?
+  static var workspacePath: String?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     NSApp.setActivationPolicy(.regular)
@@ -23,6 +25,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     self.window = window
 
     setupMenu()
+    setupLSPTimer()
+  }
+
+  private func setupLSPTimer() {
+    // Call tick() every 16ms (~60fps) to process LSP messages
+    lspTickTimer = Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { [weak self] _ in
+      self?.splitContainerViewController?.tickAllEditors()
+    }
   }
 
   private func setupMenu() {
@@ -39,7 +49,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let fileMenuItem = NSMenuItem()
     let fileMenu = NSMenu(title: "File")
     fileMenu.addItem(withTitle: "New Tab", action: #selector(newTab), keyEquivalent: "t")
-    fileMenu.addItem(withTitle: "Open...", action: #selector(openFile), keyEquivalent: "o")
+    fileMenu.addItem(withTitle: "Open File...", action: #selector(openFile), keyEquivalent: "o")
+
+    let openFolderItem = NSMenuItem(title: "Open Folder...", action: #selector(openFolder), keyEquivalent: "o")
+    openFolderItem.keyEquivalentModifierMask = [.command, .shift]
+    fileMenu.addItem(openFolderItem)
+
+    fileMenu.addItem(NSMenuItem.separator())
     fileMenu.addItem(withTitle: "Save", action: #selector(saveFile), keyEquivalent: "s")
     fileMenu.addItem(NSMenuItem.separator())
     fileMenu.addItem(withTitle: "Close Tab", action: #selector(closeTab), keyEquivalent: "w")
@@ -92,6 +108,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
   @objc private func openFile() {
     splitContainerViewController?.openFile()
+  }
+
+  @objc private func openFolder() {
+    let panel = NSOpenPanel()
+    panel.canChooseFiles = false
+    panel.canChooseDirectories = true
+    panel.allowsMultipleSelection = false
+    panel.message = "Select a folder to open as workspace"
+
+    panel.begin { [weak self] response in
+      guard response == .OK, let url = panel.url else { return }
+
+      // Store workspace path globally
+      AppDelegate.workspacePath = url.path
+
+      // Initialize LSP for all editors
+      self?.splitContainerViewController?.initializeLSPForAllEditors(workspacePath: url.path)
+
+      // Update window title
+      self?.window?.title = "Prodigeetor - \(url.lastPathComponent)"
+    }
   }
 
   @objc private func saveFile() {

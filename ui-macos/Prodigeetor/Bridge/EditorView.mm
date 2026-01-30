@@ -540,15 +540,40 @@ static std::string resolveResourcePath(NSString *relativePath) {
   }
 
   _scrollOffsetY = self.bounds.origin.y;
+  // Highlight the entire document once to get all syntax spans
+  NSString *fullText = [self.coreBridge getText];
+  std::string documentText = std::string([fullText UTF8String]);
+  std::vector<prodigeetor::RenderSpan> allSpans = _highlighter.highlight(documentText);
+
   NSInteger startLine = (NSInteger)floor(_scrollOffsetY / _lineHeight);
   CGFloat offset = _scrollOffsetY - (startLine * _lineHeight);
   CGFloat y = 8.0 - offset;
   for (NSInteger i = startLine; i < lineCount && y < self.bounds.size.height; i++) {
     NSString *line = [self.coreBridge lineTextAt:i];
-
     std::string lineText = std::string([line UTF8String]);
-    std::vector<prodigeetor::RenderSpan> spans = _highlighter.highlight(lineText);
-    prodigeetor::LineLayout layout = _renderer.layout_line(lineText, spans);
+
+    // Get the byte offset range for this line in the full document
+    NSInteger lineStartOffset = [self.coreBridge offsetAtLine:i column:0];
+    NSInteger lineEndOffset = [self.coreBridge offsetAtLine:i column:[self.coreBridge lineGraphemeCount:i]];
+
+    // Filter spans that apply to this line
+    std::vector<prodigeetor::RenderSpan> lineSpans;
+    for (const auto &span : allSpans) {
+      // Check if this span overlaps with the current line
+      if (span.range.start.column < (uint32_t)lineEndOffset && span.range.end.column > (uint32_t)lineStartOffset) {
+        prodigeetor::RenderSpan lineSpan = span;
+        // Adjust span positions to be relative to the line start
+        lineSpan.range.start.column = (span.range.start.column > (uint32_t)lineStartOffset)
+            ? span.range.start.column - lineStartOffset
+            : 0;
+        lineSpan.range.end.column = (span.range.end.column < (uint32_t)lineEndOffset)
+            ? span.range.end.column - lineStartOffset
+            : lineEndOffset - lineStartOffset;
+        lineSpans.push_back(lineSpan);
+      }
+    }
+
+    prodigeetor::LineLayout layout = _renderer.layout_line(lineText, lineSpans);
     _renderer.draw_line(layout, 8.0f, static_cast<float>(y));
 
     [self drawSelectionForLine:i lineText:line y:y];

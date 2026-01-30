@@ -14,6 +14,8 @@ add_library(prodigeetor_core STATIC
   src/syntax_highlighter.cpp
   src/theme.cpp
   src/settings.cpp
+  src/lsp_client.cpp
+  src/lsp_manager.cpp
 )
 
 target_include_directories(prodigeetor_core PUBLIC
