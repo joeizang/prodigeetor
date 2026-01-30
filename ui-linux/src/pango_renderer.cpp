@@ -26,6 +26,10 @@ void PangoRenderer::set_font(const std::string &family, float size_points) {
   pango_font_description_set_absolute_size(m_font_desc, m_size_points * PANGO_SCALE);
 }
 
+void PangoRenderer::set_ligatures(bool enabled) {
+  m_ligatures = enabled;
+}
+
 LayoutMetrics PangoRenderer::measure_line(const std::string &text) {
   LayoutMetrics metrics;
   if (!m_context) {
@@ -71,6 +75,10 @@ void PangoRenderer::draw_line(const LineLayout &layout, float x, float y) {
 
   if (!layout.spans.empty()) {
     PangoAttrList *attrs = pango_attr_list_new();
+    if (m_ligatures) {
+      PangoAttribute *liga_attr = pango_attr_font_features_new("liga=1");
+      pango_attr_list_insert(attrs, liga_attr);
+    }
     for (const auto &span : layout.spans) {
       uint32_t color = span.style.fg_color;
       guint16 r = static_cast<guint16>(((color >> 16) & 0xFF) * 257);
@@ -83,6 +91,14 @@ void PangoRenderer::draw_line(const LineLayout &layout, float x, float y) {
     }
     pango_layout_set_attributes(pango_layout, attrs);
     pango_attr_list_unref(attrs);
+  } else {
+    if (m_ligatures) {
+      PangoAttrList *attrs = pango_attr_list_new();
+      PangoAttribute *liga_attr = pango_attr_font_features_new("liga=1");
+      pango_attr_list_insert(attrs, liga_attr);
+      pango_layout_set_attributes(pango_layout, attrs);
+      pango_attr_list_unref(attrs);
+    }
   }
 
   cairo_save(m_context);

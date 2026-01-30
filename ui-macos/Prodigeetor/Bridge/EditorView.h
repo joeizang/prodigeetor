@@ -8,6 +8,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initWithFrame:(NSRect)frameRect coreBridge:(CoreBridge *)coreBridge;
 - (void)setEditorFont:(NSString *)family size:(CGFloat)size;
+- (void)setFilePath:(NSString *)path;
+- (void)setThemePath:(NSString *)path;
 
 @end
 

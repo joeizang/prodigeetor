@@ -1,14 +1,19 @@
 #include "editor_widget.h"
 
 #include <algorithm>
+#include <cctype>
 #include <memory>
 #include <string_view>
+
+#include <gio/gio.h>
 
 #include "grapheme.h"
 #include "core.h"
 #include "pango_renderer.h"
 #include "syntax_highlighter.h"
 #include "text_buffer.h"
+#include "theme.h"
+#include "settings.h"
 
 struct EditorState {
   prodigeetor::TextBuffer buffer;
@@ -17,10 +22,23 @@ struct EditorState {
   size_t cursor_offset = 0;
   size_t selection_anchor = 0;
   float line_height = 18.0f;
+  float scroll_offset_y = 0.0f;
+  float view_height = 0.0f;
   GtkWidget *widget = nullptr;
+  GtkAdjustment *v_adjustment = nullptr;
+  GtkWidget *viewport = nullptr;
+  std::string theme_path = "themes/default.json";
+  GFileMonitor *theme_monitor = nullptr;
+  prodigeetor::EditorSettings settings;
+  std::string font_stack;
 };
 
 static void editor_state_destroy(gpointer data) {
+  auto *state = static_cast<EditorState *>(data);
+  if (state && state->theme_monitor) {
+    g_object_unref(state->theme_monitor);
+    state->theme_monitor = nullptr;
+  }
   delete static_cast<EditorState *>(data);
 }
 
@@ -31,13 +49,30 @@ static void editor_draw(GtkDrawingArea *area, cairo_t *cr, int, int, gpointer da
   }
 
   state->renderer.set_context(cr);
-  state->renderer.set_font("Monospace", 14.0f);
+  if (!state->font_stack.empty()) {
+    state->renderer.set_font(state->font_stack, state->settings.font_size);
+    state->renderer.set_ligatures(state->settings.font_ligatures);
+  } else {
+    state->renderer.set_font("Monoid", 14.0f);
+  }
   prodigeetor::LayoutMetrics metrics = state->renderer.measure_line("M");
   state->line_height = metrics.height > 0 ? metrics.height : state->line_height;
+  if (state->viewport) {
+    state->view_height = static_cast<float>(gtk_widget_get_height(state->viewport));
+  } else {
+    state->view_height = static_cast<float>(gtk_widget_get_height(state->widget));
+  }
+  if (state->v_adjustment) {
+    state->scroll_offset_y = static_cast<float>(gtk_adjustment_get_value(state->v_adjustment));
+  }
 
   size_t lines = state->buffer.line_count();
-  float y = 8.0f;
-  for (size_t i = 0; i < lines; ++i) {
+  float content_height = static_cast<float>(lines) * state->line_height + 16.0f;
+  gtk_widget_set_size_request(state->widget, -1, static_cast<int>(content_height));
+  size_t start_line = static_cast<size_t>(state->scroll_offset_y / state->line_height);
+  float offset = state->scroll_offset_y - (start_line * state->line_height);
+  float y = 8.0f - offset;
+  for (size_t i = start_line; i < lines && y < state->view_height; ++i) {
     std::string line = state->buffer.line_text(i);
     std::vector<prodigeetor::RenderSpan> spans = state->highlighter.highlight(line);
 
@@ -81,7 +116,7 @@ static void editor_draw(GtkDrawingArea *area, cairo_t *cr, int, int, gpointer da
       cairo_restore(cr);
     }
 
-    y += layout.metrics.height > 0 ? layout.metrics.height : 18.0f;
+    y += state->line_height;
   }
 }
 
@@ -146,6 +181,68 @@ static gboolean editor_key_pressed(GtkEventControllerKey *, guint keyval, guint,
   return FALSE;
 }
 
+static float max_scroll_offset(const EditorState *state) {
+  if (!state) {
+    return 0.0f;
+  }
+  float content_height = static_cast<float>(state->buffer.line_count()) * state->line_height + 16.0f;
+  if (content_height <= state->view_height) {
+    return 0.0f;
+  }
+  return content_height - state->view_height;
+}
+
+static void editor_reload_theme(EditorState *state) {
+  if (!state) {
+    return;
+  }
+  prodigeetor::SyntaxTheme theme = prodigeetor::SyntaxTheme::load_from_file(state->theme_path);
+  state->highlighter.set_theme(std::move(theme));
+}
+
+static void editor_theme_changed(GFileMonitor *, GFile *, GFile *, GFileMonitorEvent event_type, gpointer data) {
+  auto *state = static_cast<EditorState *>(data);
+  if (!state) {
+    return;
+  }
+  if (event_type == G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT || event_type == G_FILE_MONITOR_EVENT_CREATED) {
+    editor_reload_theme(state);
+    gtk_widget_queue_draw(state->widget);
+  }
+}
+
+static prodigeetor::TreeSitterHighlighter::LanguageId language_for_path(const std::string &path) {
+  std::string lower = path;
+  std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  if (lower.size() >= 4 && lower.ends_with(".tsx")) {
+    return prodigeetor::TreeSitterHighlighter::LanguageId::TSX;
+  }
+  if (lower.size() >= 3 && lower.ends_with(".ts")) {
+    return prodigeetor::TreeSitterHighlighter::LanguageId::TypeScript;
+  }
+  if (lower.size() >= 3 && (lower.ends_with(".js") || lower.ends_with(".jsx"))) {
+    return prodigeetor::TreeSitterHighlighter::LanguageId::JavaScript;
+  }
+  if (lower.size() >= 6 && lower.ends_with(".swift")) {
+    return prodigeetor::TreeSitterHighlighter::LanguageId::Swift;
+  }
+  if (lower.size() >= 3 && lower.ends_with(".cs")) {
+    return prodigeetor::TreeSitterHighlighter::LanguageId::CSharp;
+  }
+  if (lower.size() >= 5 && (lower.ends_with(".html") || lower.ends_with(".htm"))) {
+    return prodigeetor::TreeSitterHighlighter::LanguageId::HTML;
+  }
+  if (lower.size() >= 4 && lower.ends_with(".css")) {
+    return prodigeetor::TreeSitterHighlighter::LanguageId::CSS;
+  }
+  if (lower.size() >= 4 && lower.ends_with(".sql")) {
+    return prodigeetor::TreeSitterHighlighter::LanguageId::SQL;
+  }
+  return prodigeetor::TreeSitterHighlighter::LanguageId::JavaScript;
+}
+
 static void editor_set_cursor_from_point(EditorState *state, double x, double y, bool extend) {
   if (!state) {
     return;
@@ -153,7 +250,8 @@ static void editor_set_cursor_from_point(EditorState *state, double x, double y,
   if (!extend) {
     state->selection_anchor = state->cursor_offset;
   }
-  size_t line = static_cast<size_t>((y - 8.0) / state->line_height);
+  double content_y = y + state->scroll_offset_y;
+  size_t line = static_cast<size_t>((content_y - 8.0) / state->line_height);
   if (line >= state->buffer.line_count()) {
     line = state->buffer.line_count() > 0 ? state->buffer.line_count() - 1 : 0;
   }
@@ -191,6 +289,14 @@ GtkWidget *prodigeetor_editor_widget_new(void) {
   GtkWidget *area = gtk_drawing_area_new();
   auto *state = new EditorState();
   state->widget = area;
+  state->settings = prodigeetor::SettingsLoader::load_from_file("settings/default.json");
+  state->font_stack = state->settings.font_family;
+  for (const auto &fallback : state->settings.font_fallbacks) {
+    state->font_stack.append(", ");
+    state->font_stack.append(fallback);
+  }
+  editor_reload_theme(state);
+  state->highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::JavaScript);
   g_object_set_data_full(G_OBJECT(area), "editor-state", state, editor_state_destroy);
   gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(area), editor_draw, state, nullptr);
   gtk_widget_set_focusable(area, TRUE);
@@ -226,6 +332,16 @@ GtkWidget *prodigeetor_editor_widget_new(void) {
     gtk_gesture_drag_get_start_point(gesture, &start_x, &start_y);
     double x = start_x + offset_x;
     double y = start_y + offset_y;
+    if (y < 0.0) {
+      state->scroll_offset_y = std::max(0.0f, state->scroll_offset_y - state->line_height);
+      y = 0.0;
+    } else if (y > state->view_height) {
+      state->scroll_offset_y = std::min(max_scroll_offset(state), state->scroll_offset_y + state->line_height);
+      y = state->view_height;
+    }
+    if (state->v_adjustment) {
+      gtk_adjustment_set_value(state->v_adjustment, state->scroll_offset_y);
+    }
     editor_set_cursor_from_point(state, x, y, true);
   }), state);
   gtk_widget_add_controller(area, GTK_EVENT_CONTROLLER(drag));
@@ -240,4 +356,42 @@ void prodigeetor_editor_widget_set_text(GtkWidget *widget, const char *text) {
   }
   state->buffer = prodigeetor::TextBuffer(text ? text : "");
   gtk_widget_queue_draw(widget);
+}
+
+void prodigeetor_editor_widget_set_file_path(GtkWidget *widget, const char *path) {
+  auto *state = static_cast<EditorState *>(g_object_get_data(G_OBJECT(widget), "editor-state"));
+  if (!state || !path) {
+    return;
+  }
+  state->highlighter.set_language(language_for_path(path));
+  gtk_widget_queue_draw(widget);
+}
+
+void prodigeetor_editor_widget_set_theme_path(GtkWidget *widget, const char *path) {
+  auto *state = static_cast<EditorState *>(g_object_get_data(G_OBJECT(widget), "editor-state"));
+  if (!state || !path) {
+    return;
+  }
+  state->theme_path = path;
+  editor_reload_theme(state);
+  if (state->theme_monitor) {
+    g_object_unref(state->theme_monitor);
+    state->theme_monitor = nullptr;
+  }
+  GFile *file = g_file_new_for_path(path);
+  state->theme_monitor = g_file_monitor_file(file, G_FILE_MONITOR_NONE, nullptr, nullptr);
+  if (state->theme_monitor) {
+    g_signal_connect(state->theme_monitor, "changed", G_CALLBACK(editor_theme_changed), state);
+  }
+  g_object_unref(file);
+  gtk_widget_queue_draw(widget);
+}
+
+void prodigeetor_editor_widget_attach_scroll(GtkWidget *widget, GtkAdjustment *vadj, GtkWidget *viewport) {
+  auto *state = static_cast<EditorState *>(g_object_get_data(G_OBJECT(widget), "editor-state"));
+  if (!state) {
+    return;
+  }
+  state->v_adjustment = vadj;
+  state->viewport = viewport;
 }

@@ -5,7 +5,9 @@
 #include <vector>
 
 #include "CoreTextRenderer.h"
+#include "settings.h"
 #include "syntax_highlighter.h"
+#include "theme.h"
 
 @interface EditorView ()
 @property (nonatomic, strong) CoreBridge *coreBridge;
@@ -21,20 +23,41 @@
   CGFloat _lineHeight;
   CGFloat _baseline;
   BOOL _isDragging;
+  CGFloat _scrollOffsetY;
+  NSString *_filePath;
+  NSString *_themePath;
+  NSDate *_themeLastModified;
+  NSTimer *_themeTimer;
+  prodigeetor::EditorSettings _settings;
 }
 
 - (instancetype)initWithFrame:(NSRect)frameRect coreBridge:(CoreBridge *)coreBridge {
   self = [super initWithFrame:frameRect];
   if (self) {
     _coreBridge = coreBridge;
-    _fontFamily = @"Menlo";
+    _settings = prodigeetor::SettingsLoader::load_from_file("settings/default.json");
+    _fontFamily = [NSString stringWithUTF8String:_settings.font_family.c_str()];
     _fontSize = 14.0;
     _cursorOffset = 0;
     _selectionAnchor = 0;
     _lineHeight = 18.0;
     _baseline = 14.0;
     _isDragging = NO;
+    _scrollOffsetY = 0.0;
     [self setWantsLayer:YES];
+
+    _themePath = @"themes/default.json";
+    [self reloadThemeIfNeeded:YES];
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::JavaScript);
+
+    std::vector<std::string> families;
+    families.push_back(_settings.font_family);
+    for (const auto &fallback : _settings.font_fallbacks) {
+      families.push_back(fallback);
+    }
+    _renderer.set_font_stack(families, _settings.font_size);
+    _renderer.set_ligatures(_settings.font_ligatures);
+    _fontSize = _settings.font_size;
   }
   return self;
 }
@@ -47,14 +70,86 @@
   return YES;
 }
 
+- (void)dealloc {
+  [_themeTimer invalidate];
+  _themeTimer = nil;
+}
+
 - (void)setEditorFont:(NSString *)family size:(CGFloat)size {
-  _fontFamily = family ?: @"Menlo";
+  _fontFamily = family ?: @"Monoid";
   _fontSize = size > 0 ? size : 14.0;
-  _renderer.set_font([_fontFamily UTF8String], static_cast<float>(_fontSize));
+  std::vector<std::string> families;
+  families.push_back([_fontFamily UTF8String]);
+  for (const auto &fallback : _settings.font_fallbacks) {
+    families.push_back(fallback);
+  }
+  _renderer.set_font_stack(families, static_cast<float>(_fontSize));
+  _renderer.set_ligatures(_settings.font_ligatures);
   prodigeetor::LayoutMetrics metrics = _renderer.measure_line("M");
   _lineHeight = metrics.height > 0 ? metrics.height : 18.0;
   _baseline = metrics.baseline > 0 ? metrics.baseline : 14.0;
   [self setNeedsDisplay:YES];
+}
+
+- (void)setFilePath:(NSString *)path {
+  _filePath = [path copy];
+  if (!_filePath) {
+    return;
+  }
+  NSString *lower = _filePath.lowercaseString;
+  if ([lower hasSuffix:@".ts"]) {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::TypeScript);
+  } else if ([lower hasSuffix:@".tsx"]) {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::TSX);
+  } else if ([lower hasSuffix:@".js"] || [lower hasSuffix:@".jsx"]) {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::JavaScript);
+  } else if ([lower hasSuffix:@".swift"]) {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::Swift);
+  } else if ([lower hasSuffix:@".cs"]) {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::CSharp);
+  } else if ([lower hasSuffix:@".html"] || [lower hasSuffix:@".htm"]) {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::HTML);
+  } else if ([lower hasSuffix:@".css"]) {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::CSS);
+  } else if ([lower hasSuffix:@".sql"]) {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::SQL);
+  } else {
+    _highlighter.set_language(prodigeetor::TreeSitterHighlighter::LanguageId::JavaScript);
+  }
+  [self setNeedsDisplay:YES];
+}
+
+- (void)setThemePath:(NSString *)path {
+  _themePath = [path copy];
+  [self reloadThemeIfNeeded:YES];
+}
+
+- (void)reloadThemeIfNeeded:(BOOL)force {
+  if (!_themePath) {
+    return;
+  }
+  NSString *expanded = [_themePath stringByStandardizingPath];
+  NSDictionary<NSFileAttributeKey, id> *attrs = [[NSFileManager defaultManager] attributesOfItemAtPath:expanded error:nil];
+  NSDate *modified = attrs.fileModificationDate;
+  if (!force && _themeLastModified && modified && [modified compare:_themeLastModified] != NSOrderedDescending) {
+    return;
+  }
+  _themeLastModified = modified;
+  prodigeetor::SyntaxTheme theme = prodigeetor::SyntaxTheme::load_from_file([expanded UTF8String]);
+  _highlighter.set_theme(std::move(theme));
+  [self setNeedsDisplay:YES];
+
+  if (!_themeTimer) {
+    _themeTimer = [NSTimer scheduledTimerWithTimeInterval:1.0
+                                                   target:self
+                                                 selector:@selector(onThemeTimer)
+                                                 userInfo:nil
+                                                  repeats:YES];
+  }
+}
+
+- (void)onThemeTimer {
+  [self reloadThemeIfNeeded:NO];
 }
 
 - (NSString *)substringByGraphemeCount:(NSString *)text count:(NSInteger)count {
@@ -113,8 +208,19 @@
   [self setNeedsDisplay:YES];
 }
 
+- (CGFloat)maxScrollOffset {
+  NSInteger lineCount = [self.coreBridge lineCount];
+  CGFloat contentHeight = lineCount * _lineHeight + 16.0;
+  CGFloat viewHeight = self.bounds.size.height;
+  if (contentHeight <= viewHeight) {
+    return 0.0;
+  }
+  return contentHeight - viewHeight;
+}
+
 - (void)updateCursorFromPoint:(NSPoint)point extendSelection:(BOOL)extendSelection {
-  NSInteger lineIndex = (NSInteger)floor((point.y - 8.0) / _lineHeight);
+  CGFloat contentY = point.y + _scrollOffsetY;
+  NSInteger lineIndex = (NSInteger)floor((contentY - 8.0) / _lineHeight);
   if (lineIndex < 0) {
     lineIndex = 0;
   }
@@ -149,6 +255,20 @@
     return;
   }
   NSPoint point = [self convertPoint:event.locationInWindow fromView:nil];
+  CGFloat maxScroll = [self maxScrollOffset];
+  if (point.y < 0.0) {
+    _scrollOffsetY = MAX(0.0, _scrollOffsetY - _lineHeight);
+    point.y = 0.0;
+  } else if (point.y > self.bounds.size.height) {
+    _scrollOffsetY = MIN(maxScroll, _scrollOffsetY + _lineHeight);
+    point.y = self.bounds.size.height;
+  }
+  if (self.enclosingScrollView) {
+    NSPoint origin = self.enclosingScrollView.contentView.bounds.origin;
+    origin.y = _scrollOffsetY;
+    [self.enclosingScrollView.contentView scrollToPoint:origin];
+    [self.enclosingScrollView reflectScrolledClipView:self.enclosingScrollView.contentView];
+  }
   [self updateCursorFromPoint:point extendSelection:YES];
 }
 
@@ -189,6 +309,12 @@
 
 - (void)keyDown:(NSEvent *)event {
   BOOL extend = (event.modifierFlags & NSEventModifierFlagShift) == NSEventModifierFlagShift;
+  if ((event.modifierFlags & NSEventModifierFlagCommand) == NSEventModifierFlagCommand) {
+    if ([event.characters.lowercaseString isEqualToString:@"r"]) {
+      [self reloadThemeIfNeeded:YES];
+      return;
+    }
+  }
   switch (event.keyCode) {
     case 123: // left arrow
       [self moveCursorLeft:extend];
@@ -268,14 +394,21 @@
   }
 
   _renderer.set_context(context);
-  _renderer.set_font([_fontFamily UTF8String], static_cast<float>(_fontSize));
   prodigeetor::LayoutMetrics metrics = _renderer.measure_line("M");
   _lineHeight = metrics.height > 0 ? metrics.height : _lineHeight;
   _baseline = metrics.baseline > 0 ? metrics.baseline : _baseline;
 
   NSInteger lineCount = [self.coreBridge lineCount];
-  CGFloat y = 8.0;
-  for (NSInteger i = 0; i < lineCount; i++) {
+  CGFloat contentHeight = lineCount * _lineHeight + 16.0;
+  if (self.frame.size.height != contentHeight) {
+    self.frame = NSMakeRect(self.frame.origin.x, self.frame.origin.y, self.frame.size.width, contentHeight);
+  }
+
+  _scrollOffsetY = self.bounds.origin.y;
+  NSInteger startLine = (NSInteger)floor(_scrollOffsetY / _lineHeight);
+  CGFloat offset = _scrollOffsetY - (startLine * _lineHeight);
+  CGFloat y = 8.0 - offset;
+  for (NSInteger i = startLine; i < lineCount && y < self.bounds.size.height; i++) {
     NSString *line = [self.coreBridge lineTextAt:i];
     [self drawSelectionForLine:i lineText:line y:y];
 

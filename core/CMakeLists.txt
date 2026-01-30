@@ -12,6 +12,8 @@ add_library(prodigeetor_core STATIC
   src/rendering.cpp
   src/grapheme.cpp
   src/syntax_highlighter.cpp
+  src/theme.cpp
+  src/settings.cpp
 )
 
 target_include_directories(prodigeetor_core PUBLIC
@@ -54,7 +56,79 @@ target_include_directories(tree_sitter_javascript PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-javascript/src
 )
 
-target_link_libraries(prodigeetor_core PRIVATE tree_sitter tree_sitter_javascript)
+add_library(tree_sitter_typescript STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-typescript/typescript/src/parser.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-typescript/typescript/src/scanner.c
+)
+target_include_directories(tree_sitter_typescript PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter/lib/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-typescript/typescript/src
+)
+
+add_library(tree_sitter_tsx STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-typescript/tsx/src/parser.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-typescript/tsx/src/scanner.c
+)
+target_include_directories(tree_sitter_tsx PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter/lib/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-typescript/tsx/src
+)
+
+add_library(tree_sitter_swift STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-swift/src/parser.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-swift/src/scanner.c
+)
+target_include_directories(tree_sitter_swift PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter/lib/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-swift/src
+)
+
+add_library(tree_sitter_c_sharp STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-c-sharp/src/parser.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-c-sharp/src/scanner.c
+)
+target_include_directories(tree_sitter_c_sharp PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter/lib/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-c-sharp/src
+)
+
+add_library(tree_sitter_html STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-html/src/parser.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-html/src/scanner.c
+)
+target_include_directories(tree_sitter_html PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter/lib/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-html/src
+)
+
+add_library(tree_sitter_css STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-css/src/parser.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-css/src/scanner.c
+)
+target_include_directories(tree_sitter_css PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter/lib/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-css/src
+)
+
+add_library(tree_sitter_sql STATIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-sql/src/parser.c
+)
+target_include_directories(tree_sitter_sql PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter/lib/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/../third_party/tree-sitter-sql/src
+)
+
+target_link_libraries(prodigeetor_core PRIVATE
+  tree_sitter
+  tree_sitter_javascript
+  tree_sitter_typescript
+  tree_sitter_tsx
+  tree_sitter_swift
+  tree_sitter_c_sharp
+  tree_sitter_html
+  tree_sitter_css
+  tree_sitter_sql
+)
 target_compile_definitions(prodigeetor_core PRIVATE PRODIGEETOR_USE_TREE_SITTER=1)
 
 # Placeholder for future dependencies (tree-sitter, JSON, etc.)

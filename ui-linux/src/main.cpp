@@ -12,8 +12,16 @@ static void on_activate(GApplication *app, gpointer) {
                                      "// Prodigeetor\n"
                                      "let greeting = \"Hello, world!\";\n"
                                      "print(greeting);\n");
+  prodigeetor_editor_widget_set_file_path(editor, "Sample.ts");
+  prodigeetor_editor_widget_set_theme_path(editor, "themes/default.json");
 
-  gtk_window_set_child(GTK_WINDOW(window), editor);
+  GtkWidget *scroller = gtk_scrolled_window_new();
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroller), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller), editor);
+  GtkAdjustment *vadj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scroller));
+  prodigeetor_editor_widget_attach_scroll(editor, vadj, scroller);
+
+  gtk_window_set_child(GTK_WINDOW(window), scroller);
   gtk_widget_show(window);
 }
 

@@ -45,8 +45,37 @@ void CoreTextRenderer::set_font(const std::string &family, float size_points) {
     m_font = nullptr;
   }
   CFStringRef cf_family = CFStringCreateWithCString(kCFAllocatorDefault, family.c_str(), kCFStringEncodingUTF8);
-  m_font = CTFontCreateWithName(cf_family, size_points, nullptr);
+  CTFontRef font = CTFontCreateWithName(cf_family, size_points, nullptr);
+  if (!font) {
+    font = CTFontCreateWithName(CFSTR("Menlo"), size_points, nullptr);
+  }
+  m_font = font;
   CFRelease(cf_family);
+}
+
+void CoreTextRenderer::set_font_stack(const std::vector<std::string> &families, float size_points) {
+  if (families.empty()) {
+    set_font("Menlo", size_points);
+    return;
+  }
+  for (const auto &family : families) {
+    if (m_font) {
+      CFRelease(m_font);
+      m_font = nullptr;
+    }
+    CFStringRef cf_family = CFStringCreateWithCString(kCFAllocatorDefault, family.c_str(), kCFStringEncodingUTF8);
+    CTFontRef font = CTFontCreateWithName(cf_family, size_points, nullptr);
+    CFRelease(cf_family);
+    if (font) {
+      m_font = font;
+      return;
+    }
+  }
+  set_font("Menlo", size_points);
+}
+
+void CoreTextRenderer::set_ligatures(bool enabled) {
+  m_ligatures = enabled;
 }
 
 LayoutMetrics CoreTextRenderer::measure_line(const std::string &text) {
@@ -58,10 +87,13 @@ LayoutMetrics CoreTextRenderer::measure_line(const std::string &text) {
                                                 static_cast<CFIndex>(text.size()),
                                                 kCFStringEncodingUTF8,
                                                 false);
+  const void *keys[] = {kCTFontAttributeName, kCTLigatureAttributeName};
+  int ligature = m_ligatures ? 1 : 0;
+  const void *values[] = {m_font, &ligature};
   CFDictionaryRef attrs = CFDictionaryCreate(kCFAllocatorDefault,
-                                             reinterpret_cast<const void **>(&kCTFontAttributeName),
-                                             reinterpret_cast<const void **>(&m_font),
-                                             1,
+                                             keys,
+                                             values,
+                                             2,
                                              &kCFTypeDictionaryKeyCallBacks,
                                              &kCFTypeDictionaryValueCallBacks);
   CFAttributedStringRef attr = CFAttributedStringCreate(kCFAllocatorDefault, cf_text, attrs);
@@ -106,10 +138,13 @@ void CoreTextRenderer::draw_line(const LineLayout &layout, float x, float y) {
   CFMutableAttributedStringRef attr = CFAttributedStringCreateMutable(kCFAllocatorDefault, 0);
   CFAttributedStringReplaceString(attr, CFRangeMake(0, 0), cf_text);
 
+  const void *base_keys[] = {kCTFontAttributeName, kCTLigatureAttributeName};
+  int base_ligature = m_ligatures ? 1 : 0;
+  const void *base_values[] = {m_font, &base_ligature};
   CFDictionaryRef base_attrs = CFDictionaryCreate(kCFAllocatorDefault,
-                                                  reinterpret_cast<const void **>(&kCTFontAttributeName),
-                                                  reinterpret_cast<const void **>(&m_font),
-                                                  1,
+                                                  base_keys,
+                                                  base_values,
+                                                  2,
                                                   &kCFTypeDictionaryKeyCallBacks,
                                                   &kCFTypeDictionaryValueCallBacks);
   CFAttributedStringSetAttributes(attr, CFRangeMake(0, CFStringGetLength(cf_text)), base_attrs, false);

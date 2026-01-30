@@ -21,16 +21,24 @@ final class MainViewController: NSViewController {
     """)
 
     let editor = EditorView(frame: .zero, coreBridge: coreBridge)
-    editor.translatesAutoresizingMaskIntoConstraints = false
-    editor.setEditorFont("Menlo", size: 14)
-    view.addSubview(editor)
+    editor.setFilePath("Sample.ts")
+    editor.setThemePath("themes/default.json")
+
+    let scrollView = NSScrollView()
+    scrollView.translatesAutoresizingMaskIntoConstraints = false
+    scrollView.hasVerticalScroller = true
+    scrollView.hasHorizontalScroller = false
+    scrollView.documentView = editor
+    scrollView.borderType = .noBorder
+
+    view.addSubview(scrollView)
     self.editorView = editor
 
     NSLayoutConstraint.activate([
-      editor.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      editor.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      editor.topAnchor.constraint(equalTo: view.topAnchor),
-      editor.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+      scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      scrollView.topAnchor.constraint(equalTo: view.topAnchor),
+      scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
     ])
   }
 }

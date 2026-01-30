@@ -1,0 +1,8 @@
+{
+  "editor": {
+    "fontFamily": "Monoid",
+    "fontFallbacks": ["Menlo", "Fira Code", "monospace"],
+    "fontSize": 14,
+    "fontLigatures": true
+  }
+}

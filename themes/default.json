@@ -1,0 +1,14 @@
+{
+  "name": "Nord Dark",
+  "captures": {
+    "string": "#A3BE8C",
+    "comment": "#616E88",
+    "keyword": "#81A1C1",
+    "number": "#B48EAD",
+    "function": "#88C0D0",
+    "property": "#8FBCBB",
+    "constant": "#D08770",
+    "variable": "#D8DEE9",
+    "type": "#8FBCBB"
+  }
+}
