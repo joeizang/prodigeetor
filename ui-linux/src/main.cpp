@@ -1,119 +1,65 @@
 #include <gtk/gtk.h>
+#include <gdk/gdkkeysyms.h>
 #include <string>
 
-#include "editor_widget.h"
+#include "split_container.h"
 
 struct AppData {
   GtkWidget *window = nullptr;
-  GtkWidget *editor = nullptr;
-  std::string current_file_path;
+  GtkWidget *split_container = nullptr;
 };
 
-static void save_to_file(AppData *data, const char *path) {
-  if (!data || !path) {
-    return;
-  }
-  char *text = prodigeetor_editor_widget_get_text(data->editor);
-  GError *error = nullptr;
-  if (!g_file_set_contents(path, text, -1, &error)) {
-    GtkWidget *dialog = gtk_message_dialog_new(
-        GTK_WINDOW(data->window), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR,
-        GTK_BUTTONS_OK, "Failed to save file: %s", error ? error->message : "Unknown error");
-    gtk_window_present(GTK_WINDOW(dialog));
-    g_signal_connect(dialog, "response", G_CALLBACK(gtk_window_destroy), nullptr);
-    if (error) {
-      g_error_free(error);
-    }
-  }
-  g_free(text);
-}
-
-static void on_open_response(GObject *source, GAsyncResult *result, gpointer user_data) {
-  auto *data = static_cast<AppData *>(user_data);
-  GtkFileDialog *dialog = GTK_FILE_DIALOG(source);
-  GFile *file = gtk_file_dialog_open_finish(dialog, result, nullptr);
-  if (!file) {
-    return;
-  }
-
-  char *path = g_file_get_path(file);
-  char *contents = nullptr;
-  gsize length = 0;
-  GError *error = nullptr;
-
-  if (g_file_get_contents(path, &contents, &length, &error)) {
-    prodigeetor_editor_widget_set_text(data->editor, contents);
-    prodigeetor_editor_widget_set_file_path(data->editor, path);
-    data->current_file_path = path;
-
-    char *basename = g_file_get_basename(file);
-    std::string title = std::string("Prodigeetor - ") + basename;
-    gtk_window_set_title(GTK_WINDOW(data->window), title.c_str());
-    g_free(basename);
-    g_free(contents);
-  } else {
-    GtkWidget *error_dialog = gtk_message_dialog_new(
-        GTK_WINDOW(data->window), GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR,
-        GTK_BUTTONS_OK, "Failed to open file: %s", error ? error->message : "Unknown error");
-    gtk_window_present(GTK_WINDOW(error_dialog));
-    g_signal_connect(error_dialog, "response", G_CALLBACK(gtk_window_destroy), nullptr);
-    if (error) {
-      g_error_free(error);
-    }
-  }
-
-  g_free(path);
-  g_object_unref(file);
-}
-
-static void on_save_response(GObject *source, GAsyncResult *result, gpointer user_data) {
-  auto *data = static_cast<AppData *>(user_data);
-  GtkFileDialog *dialog = GTK_FILE_DIALOG(source);
-  GFile *file = gtk_file_dialog_save_finish(dialog, result, nullptr);
-  if (!file) {
-    return;
-  }
-
-  char *path = g_file_get_path(file);
-  data->current_file_path = path;
-  save_to_file(data, path);
-
-  char *basename = g_file_get_basename(file);
-  std::string title = std::string("Prodigeetor - ") + basename;
-  gtk_window_set_title(GTK_WINDOW(data->window), title.c_str());
-  g_free(basename);
-  g_free(path);
-  g_object_unref(file);
-}
-
-static void open_file(AppData *data) {
-  GtkFileDialog *dialog = gtk_file_dialog_new();
-  gtk_file_dialog_set_title(dialog, "Open File");
-  gtk_file_dialog_open(dialog, GTK_WINDOW(data->window), nullptr, on_open_response, data);
-}
-
-static void save_file(AppData *data) {
-  if (!data->current_file_path.empty()) {
-    save_to_file(data, data->current_file_path.c_str());
-  } else {
-    GtkFileDialog *dialog = gtk_file_dialog_new();
-    gtk_file_dialog_set_title(dialog, "Save File");
-    gtk_file_dialog_save(dialog, GTK_WINDOW(data->window), nullptr, on_save_response, data);
-  }
-}
 
 static gboolean on_key_pressed(GtkEventControllerKey *, guint keyval, guint, GdkModifierType state, gpointer user_data) {
   auto *data = static_cast<AppData *>(user_data);
   bool ctrl = (state & GDK_CONTROL_MASK) != 0;
+  bool shift = (state & GDK_SHIFT_MASK) != 0;
 
+  // File operations
+  if (ctrl && keyval == GDK_KEY_t) {
+    prodigeetor_split_container_new_tab(data->split_container);
+    return TRUE;
+  }
   if (ctrl && keyval == GDK_KEY_o) {
-    open_file(data);
+    prodigeetor_split_container_open_file(data->split_container);
     return TRUE;
   }
   if (ctrl && keyval == GDK_KEY_s) {
-    save_file(data);
+    prodigeetor_split_container_save_active_file(data->split_container);
     return TRUE;
   }
+  if (ctrl && keyval == GDK_KEY_w) {
+    prodigeetor_split_container_close_active_tab(data->split_container);
+    return TRUE;
+  }
+
+  // Split operations
+  if (ctrl && keyval == GDK_KEY_backslash && !shift) {
+    prodigeetor_split_container_split_vertical(data->split_container);
+    return TRUE;
+  }
+  if (ctrl && shift && keyval == GDK_KEY_backslash) {
+    prodigeetor_split_container_split_horizontal(data->split_container);
+    return TRUE;
+  }
+
+  // Tab navigation
+  if (ctrl && keyval == GDK_KEY_bracketright) {
+    prodigeetor_split_container_next_tab(data->split_container);
+    return TRUE;
+  }
+  if (ctrl && keyval == GDK_KEY_bracketleft) {
+    prodigeetor_split_container_prev_tab(data->split_container);
+    return TRUE;
+  }
+
+  // Tab selection by number (Ctrl+1 through Ctrl+9)
+  if (ctrl && keyval >= GDK_KEY_1 && keyval <= GDK_KEY_9) {
+    int index = keyval - GDK_KEY_1;
+    prodigeetor_split_container_select_tab(data->split_container, index);
+    return TRUE;
+  }
+
   return FALSE;
 }
 
@@ -122,34 +68,24 @@ static void on_activate(GApplication *app, gpointer) {
 
   GtkWidget *window = gtk_application_window_new(GTK_APPLICATION(app));
   gtk_window_set_title(GTK_WINDOW(window), "Prodigeetor");
-  gtk_window_set_default_size(GTK_WINDOW(window), 900, 600);
+  gtk_window_set_default_size(GTK_WINDOW(window), 1200, 700);
   data->window = window;
 
-  GtkWidget *editor = prodigeetor_editor_widget_new();
-  prodigeetor_editor_widget_set_text(editor,
-                                     "// Prodigeetor\n"
-                                     "// Use Ctrl+O to open a file, Ctrl+S to save\n"
-                                     "let greeting = \"Hello, world!\";\n"
-                                     "print(greeting);\n");
-  prodigeetor_editor_widget_set_file_path(editor, "Sample.ts");
-  prodigeetor_editor_widget_set_theme_path(editor, "themes/default.json");
-  data->editor = editor;
+  // Create split container
+  GtkWidget *split_container = prodigeetor_split_container_new();
+  prodigeetor_split_container_set_window(split_container, window);
+  data->split_container = split_container;
 
-  GtkWidget *scroller = gtk_scrolled_window_new();
-  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroller), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroller), editor);
-  GtkAdjustment *vadj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(scroller));
-  prodigeetor_editor_widget_attach_scroll(editor, vadj, scroller);
-
+  // Add keyboard shortcuts
   GtkEventController *key_controller = gtk_event_controller_key_new();
   g_signal_connect(key_controller, "key-pressed", G_CALLBACK(on_key_pressed), data);
   gtk_widget_add_controller(window, key_controller);
 
-  gtk_window_set_child(GTK_WINDOW(window), scroller);
+  gtk_window_set_child(GTK_WINDOW(window), split_container);
   g_object_set_data_full(G_OBJECT(window), "app-data", data, [](gpointer ptr) {
     delete static_cast<AppData *>(ptr);
   });
-  gtk_widget_show(window);
+  gtk_window_present(window);
 }
 
 int main(int argc, char **argv) {

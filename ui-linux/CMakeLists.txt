@@ -12,6 +12,8 @@ add_executable(prodigeetor
   src/main.cpp
   src/pango_renderer.cpp
   src/editor_widget.cpp
+  src/tab_container.cpp
+  src/split_container.cpp
 )
 
 target_link_libraries(prodigeetor PRIVATE

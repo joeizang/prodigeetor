@@ -13,6 +13,10 @@
     00A111111111111111111114 /* CoreTextRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000007 /* CoreTextRenderer.mm */; };
     00A111111111111111111115 /* EditorView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000009 /* EditorView.mm */; };
     00A111111111111111111116 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A00000000000000000000B /* main.swift */; };
+    00A111111111111111111117 /* EditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A00000000000000000000C /* EditorViewController.swift */; };
+    00A111111111111111111118 /* TabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A00000000000000000000D /* TabBarView.swift */; };
+    00A111111111111111111119 /* TabContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A00000000000000000000E /* TabContainerViewController.swift */; };
+    00A11111111111111111111A /* SplitContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A00000000000000000000F /* SplitContainerViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +32,10 @@
     00A000000000000000000009 /* EditorView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorView.mm; sourceTree = "<group>"; };
     00A00000000000000000000A /* EditorView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EditorView.h; sourceTree = "<group>"; };
     00A00000000000000000000B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+    00A00000000000000000000C /* EditorViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorViewController.swift; sourceTree = "<group>"; };
+    00A00000000000000000000D /* TabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarView.swift; sourceTree = "<group>"; };
+    00A00000000000000000000E /* TabContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabContainerViewController.swift; sourceTree = "<group>"; };
+    00A00000000000000000000F /* SplitContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitContainerViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +80,10 @@
         00A000000000000000000001 /* AppDelegate.swift */,
         00A00000000000000000000B /* main.swift */,
         00A000000000000000000002 /* MainViewController.swift */,
+        00A00000000000000000000C /* EditorViewController.swift */,
+        00A00000000000000000000D /* TabBarView.swift */,
+        00A00000000000000000000E /* TabContainerViewController.swift */,
+        00A00000000000000000000F /* SplitContainerViewController.swift */,
         00A000000000000000000006 /* Info.plist */,
         00A333333333333333333336 /* Bridge */,
       );
@@ -159,6 +171,10 @@
         00A111111111111111111111 /* AppDelegate.swift in Sources */,
         00A111111111111111111116 /* main.swift in Sources */,
         00A111111111111111111112 /* MainViewController.swift in Sources */,
+        00A111111111111111111117 /* EditorViewController.swift in Sources */,
+        00A111111111111111111118 /* TabBarView.swift in Sources */,
+        00A111111111111111111119 /* TabContainerViewController.swift in Sources */,
+        00A11111111111111111111A /* SplitContainerViewController.swift in Sources */,
         00A111111111111111111113 /* CoreBridge.mm in Sources */,
         00A111111111111111111114 /* CoreTextRenderer.mm in Sources */,
         00A111111111111111111115 /* EditorView.mm in Sources */,
