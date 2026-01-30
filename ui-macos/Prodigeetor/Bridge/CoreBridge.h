@@ -11,6 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)openFile:(NSString *)uri languageId:(NSString *)languageId;
 - (void)closeFile:(NSString *)uri;
 - (void)saveFile:(NSString *)uri;
+- (void)didChangeFile:(NSString *)uri;
 - (void)setText:(NSString *)text;
 - (NSString *)getText;
 - (NSInteger)lineCount;

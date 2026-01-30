@@ -11,6 +11,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setFilePath:(NSString *)path;
 - (void)setThemePath:(NSString *)path;
 - (void)scrollToTop;
+- (void)setLSPInitialized:(BOOL)initialized;
 
 @end
 

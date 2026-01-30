@@ -164,6 +164,7 @@ final class EditorViewController: NSViewController {
     if !lspInitialized {
       coreBridge.initializeLSP(withWorkspace: workspacePath)
       lspInitialized = true
+      editorView?.setLSPInitialized(true)
     }
   }
 

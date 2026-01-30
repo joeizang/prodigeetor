@@ -1,9 +1,144 @@
 #include "lsp_manager.h"
 #include <algorithm>
 #include <iostream>
+#include <sstream>
+#include <cctype>
 
 namespace prodigeetor {
 namespace lsp {
+
+// Simple JSON parsing helpers
+namespace {
+
+std::string extractStringValue(const std::string& json, const std::string& key, size_t start = 0) {
+  std::string searchKey = "\"" + key + "\"";
+  size_t pos = json.find(searchKey, start);
+  if (pos == std::string::npos) {
+    return "";
+  }
+
+  size_t colonPos = json.find(':', pos);
+  if (colonPos == std::string::npos) {
+    return "";
+  }
+
+  size_t valueStart = json.find('"', colonPos);
+  if (valueStart == std::string::npos) {
+    return "";
+  }
+  valueStart++;
+
+  size_t valueEnd = valueStart;
+  while (valueEnd < json.size() && json[valueEnd] != '"') {
+    if (json[valueEnd] == '\\' && valueEnd + 1 < json.size()) {
+      valueEnd += 2;
+    } else {
+      valueEnd++;
+    }
+  }
+
+  if (valueEnd >= json.size()) {
+    return "";
+  }
+
+  return json.substr(valueStart, valueEnd - valueStart);
+}
+
+int extractIntValue(const std::string& json, const std::string& key, size_t start = 0) {
+  std::string searchKey = "\"" + key + "\"";
+  size_t pos = json.find(searchKey, start);
+  if (pos == std::string::npos) {
+    return 0;
+  }
+
+  size_t colonPos = json.find(':', pos);
+  if (colonPos == std::string::npos) {
+    return 0;
+  }
+
+  size_t numStart = colonPos + 1;
+  while (numStart < json.size() && std::isspace(json[numStart])) {
+    numStart++;
+  }
+
+  if (numStart >= json.size() || !std::isdigit(json[numStart])) {
+    return 0;
+  }
+
+  return std::stoi(json.substr(numStart));
+}
+
+std::vector<CompletionItem> parseCompletionResponse(const std::string& jsonResponse) {
+  std::vector<CompletionItem> items;
+
+  // Find "items" array or direct array
+  size_t itemsPos = jsonResponse.find("\"items\"");
+  size_t arrayStart = 0;
+
+  if (itemsPos != std::string::npos) {
+    arrayStart = jsonResponse.find('[', itemsPos);
+  } else {
+    // Check if result is directly an array
+    arrayStart = jsonResponse.find("\"result\"");
+    if (arrayStart != std::string::npos) {
+      arrayStart = jsonResponse.find('[', arrayStart);
+    }
+  }
+
+  if (arrayStart == std::string::npos) {
+    return items;
+  }
+
+  // Parse each completion item
+  size_t pos = arrayStart + 1;
+  while (pos < jsonResponse.size()) {
+    size_t itemStart = jsonResponse.find('{', pos);
+    if (itemStart == std::string::npos) {
+      break;
+    }
+
+    size_t itemEnd = itemStart + 1;
+    int braceCount = 1;
+    while (itemEnd < jsonResponse.size() && braceCount > 0) {
+      if (jsonResponse[itemEnd] == '{') braceCount++;
+      else if (jsonResponse[itemEnd] == '}') braceCount--;
+      itemEnd++;
+    }
+
+    if (braceCount != 0) {
+      break;
+    }
+
+    std::string itemJson = jsonResponse.substr(itemStart, itemEnd - itemStart);
+
+    CompletionItem item;
+    item.label = extractStringValue(itemJson, "label");
+    item.detail = extractStringValue(itemJson, "detail");
+    item.documentation = extractStringValue(itemJson, "documentation");
+    item.insertText = extractStringValue(itemJson, "insertText");
+    if (item.insertText.empty()) {
+      item.insertText = item.label;
+    }
+    item.kind = static_cast<CompletionItemKind>(extractIntValue(itemJson, "kind"));
+
+    if (!item.label.empty()) {
+      items.push_back(item);
+    }
+
+    pos = itemEnd;
+
+    // Check if there's another item
+    size_t commaPos = jsonResponse.find(',', pos);
+    if (commaPos == std::string::npos || commaPos > jsonResponse.find(']', pos)) {
+      break;
+    }
+    pos = commaPos + 1;
+  }
+
+  return items;
+}
+
+} // anonymous namespace
 
 LSPManager::LSPManager() {}
 
@@ -110,12 +245,13 @@ void LSPManager::completion(const std::string& uri, int line, int character,
   client->completion(
     uri, pos,
     [callback](const std::string& result) {
-      // Parse completion result (simplified)
-      // In production, properly parse JSON
-      std::vector<CompletionItem> items;
+      // Parse JSON response
+      std::vector<CompletionItem> items = parseCompletionResponse(result);
+      std::cerr << "[LSP] Parsed " << items.size() << " completion items" << std::endl;
       callback(items);
     },
     [callback](int code, const std::string& message) {
+      std::cerr << "[LSP] Completion request failed: " << message << std::endl;
       callback({});
     }
   );

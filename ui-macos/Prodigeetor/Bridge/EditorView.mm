@@ -51,6 +51,7 @@ static std::string resolveResourcePath(NSString *relativePath) {
   NSTimeInterval _blinkInterval;
   BOOL _caretVisible;
   prodigeetor::EditorSettings _settings;
+  BOOL _lspInitialized;
 }
 
 - (instancetype)initWithFrame:(NSRect)frameRect coreBridge:(CoreBridge *)coreBridge {
@@ -71,6 +72,7 @@ static std::string resolveResourcePath(NSString *relativePath) {
     _blinkInterval = 0.5;
     _caretVisible = YES;
     _lastBlink = [NSDate date];
+    _lspInitialized = NO;
 
     _themePath = @"themes/default.json";
     [self reloadThemeIfNeeded:YES];
@@ -148,6 +150,14 @@ static std::string resolveResourcePath(NSString *relativePath) {
   [self setNeedsDisplay:YES];
 }
 
+- (void)notifyLSPTextChanged {
+  if (!_lspInitialized || !_filePath || _filePath.length == 0) {
+    return;
+  }
+  NSString *uri = [NSString stringWithFormat:@"file://%@", _filePath];
+  [self.coreBridge didChangeFile:uri];
+}
+
 - (void)setEditorFont:(NSString *)family size:(CGFloat)size {
   _fontFamily = family ?: @"Monoid";
   _fontSize = size > 0 ? size : 14.0;
@@ -203,6 +213,10 @@ static std::string resolveResourcePath(NSString *relativePath) {
     [self.enclosingScrollView.documentView scrollPoint:NSMakePoint(0, 0)];
   }
   [self setNeedsDisplay:YES];
+}
+
+- (void)setLSPInitialized:(BOOL)initialized {
+  _lspInitialized = initialized;
 }
 
 - (void)reloadThemeIfNeeded:(BOOL)force {
@@ -444,10 +458,12 @@ static std::string resolveResourcePath(NSString *relativePath) {
     case 36: // return/enter
     case 76: // numpad enter
       _cursorOffset = [self.coreBridge insertText:@"\n" atOffset:_cursorOffset];
+      [self notifyLSPTextChanged];
       [self updateSelectionWithCursor:NO];
       return;
     case 51: // delete/backspace
       _cursorOffset = [self.coreBridge deleteBackwardFromOffset:_cursorOffset];
+      [self notifyLSPTextChanged];
       [self updateSelectionWithCursor:NO];
       return;
     default:
@@ -456,6 +472,7 @@ static std::string resolveResourcePath(NSString *relativePath) {
   NSString *characters = event.characters;
   if (characters.length > 0) {
     _cursorOffset = [self.coreBridge insertText:characters atOffset:_cursorOffset];
+    [self notifyLSPTextChanged];
     [self updateSelectionWithCursor:NO];
     return;
   }

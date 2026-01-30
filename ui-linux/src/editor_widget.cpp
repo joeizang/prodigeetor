@@ -14,6 +14,8 @@
 #include "text_buffer.h"
 #include "theme.h"
 #include "settings.h"
+#include "lsp_manager.h"
+#include "lsp_types.h"
 
 struct EditorState {
   prodigeetor::TextBuffer buffer;
@@ -43,6 +45,46 @@ static void editor_state_destroy(gpointer data) {
     state->theme_monitor = nullptr;
   }
   delete static_cast<EditorState *>(data);
+}
+
+static void notify_lsp_text_changed(EditorState *state) {
+  if (!state || !state->lsp_initialized || !state->core || state->file_path.empty()) {
+    return;
+  }
+  std::string uri = "file://" + state->file_path;
+  std::string text = state->buffer.text();
+  state->core->lsp_manager().didChange(uri, text);
+}
+
+static void request_completion(EditorState *state) {
+  if (!state || !state->lsp_initialized || !state->core || state->file_path.empty()) {
+    std::cerr << "[Editor] Cannot request completion - LSP not initialized" << std::endl;
+    return;
+  }
+
+  std::string uri = "file://" + state->file_path;
+  prodigeetor::Position pos = state->buffer.position_at(state->cursor_offset);
+
+  std::cerr << "[Editor] Requesting completion at line " << pos.line << ", column " << pos.column << std::endl;
+
+  state->core->lsp_manager().completion(
+    uri,
+    static_cast<int>(pos.line),
+    static_cast<int>(pos.column),
+    [](const std::vector<prodigeetor::lsp::CompletionItem>& items) {
+      std::cerr << "[Editor] Received " << items.size() << " completion items:" << std::endl;
+      for (size_t i = 0; i < std::min(items.size(), size_t(10)); ++i) {
+        std::cerr << "  - " << items[i].label;
+        if (!items[i].detail.empty()) {
+          std::cerr << " (" << items[i].detail << ")";
+        }
+        std::cerr << std::endl;
+      }
+      if (items.size() > 10) {
+        std::cerr << "  ... and " << (items.size() - 10) << " more" << std::endl;
+      }
+    }
+  );
 }
 
 static void editor_draw(GtkDrawingArea *area, cairo_t *cr, int, int, gpointer data) {
@@ -128,6 +170,14 @@ static gboolean editor_key_pressed(GtkEventControllerKey *, guint keyval, guint,
   if (!state) {
     return FALSE;
   }
+
+  // Handle Ctrl+Space for completion
+  bool ctrl = (state_mask & GDK_CONTROL_MASK) != 0;
+  if (ctrl && keyval == GDK_KEY_space) {
+    request_completion(state);
+    return TRUE;
+  }
+
   bool extend = (state_mask & GDK_SHIFT_MASK) != 0;
   if (!extend) {
     state->selection_anchor = state->cursor_offset;
@@ -137,6 +187,7 @@ static gboolean editor_key_pressed(GtkEventControllerKey *, guint keyval, guint,
     core.set_text(state->buffer.text());
     state->cursor_offset = core.delete_backward(state->cursor_offset);
     state->buffer = core.buffer();
+    notify_lsp_text_changed(state);
     gtk_widget_queue_draw(state->widget);
     return TRUE;
   }
@@ -166,6 +217,7 @@ static gboolean editor_key_pressed(GtkEventControllerKey *, guint keyval, guint,
     std::string insert = "\n";
     state->buffer.insert(state->cursor_offset, insert);
     state->cursor_offset += insert.size();
+    notify_lsp_text_changed(state);
     gtk_widget_queue_draw(state->widget);
     return TRUE;
   }
@@ -177,6 +229,7 @@ static gboolean editor_key_pressed(GtkEventControllerKey *, guint keyval, guint,
     if (len > 0) {
       state->buffer.insert(state->cursor_offset, std::string_view(utf8, static_cast<size_t>(len)));
       state->cursor_offset += static_cast<size_t>(len);
+      notify_lsp_text_changed(state);
       gtk_widget_queue_draw(state->widget);
       return TRUE;
     }

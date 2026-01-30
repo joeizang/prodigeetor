@@ -65,6 +65,15 @@
   _core->save_file(uriStr);
 }
 
+- (void)didChangeFile:(NSString *)uri {
+  if (!_core) {
+    return;
+  }
+  std::string uriStr = std::string([uri UTF8String]);
+  std::string text = _core->buffer().text();
+  _core->lsp_manager().didChange(uriStr, text);
+}
+
 - (void)setText:(NSString *)text {
   if (!_core) {
     return;
