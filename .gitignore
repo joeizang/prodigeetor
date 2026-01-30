@@ -1,0 +1,42 @@
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Build outputs
+build/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Xcode
+*.xcodeproj/*/xcuserdata/
+*.xcodeproj/project.xcworkspace/
+*.xcworkspace/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+DerivedData/
+
+# SwiftPM
+.build/
+
+# Node / extensions
+node_modules/
+dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Linux packaging
+*.deb
+*.rpm
+*.AppImage
+
+# Logs
+*.log
+
+# Editor backups
+*~
+*.swp

@@ -1,0 +1,275 @@
+// !$*UTF8*$!
+{
+  archiveVersion = 1;
+  classes = {
+  };
+  objectVersion = 56;
+  objects = {
+
+/* Begin PBXBuildFile section */
+    00A111111111111111111111 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000001 /* AppDelegate.swift */; };
+    00A111111111111111111112 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000002 /* MainViewController.swift */; };
+    00A111111111111111111113 /* CoreBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000003 /* CoreBridge.mm */; };
+    00A111111111111111111114 /* CoreTextRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000007 /* CoreTextRenderer.mm */; };
+    00A111111111111111111115 /* EditorView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 00A000000000000000000009 /* EditorView.mm */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+    00A000000000000000000000 /* Prodigeetor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Prodigeetor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+    00A000000000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+    00A000000000000000000002 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+    00A000000000000000000003 /* CoreBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreBridge.mm; sourceTree = "<group>"; };
+    00A000000000000000000004 /* CoreBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreBridge.h; sourceTree = "<group>"; };
+    00A000000000000000000005 /* Prodigeetor-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Prodigeetor-Bridging-Header.h"; sourceTree = "<group>"; };
+    00A000000000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+    00A000000000000000000007 /* CoreTextRenderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CoreTextRenderer.mm; sourceTree = "<group>"; };
+    00A000000000000000000008 /* CoreTextRenderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreTextRenderer.h; sourceTree = "<group>"; };
+    00A000000000000000000009 /* EditorView.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = EditorView.mm; sourceTree = "<group>"; };
+    00A00000000000000000000A /* EditorView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EditorView.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+    00A222222222222222222222 /* Frameworks */ = {
+      isa = PBXFrameworksBuildPhase;
+      buildActionMask = 2147483647;
+      files = (
+      );
+      runOnlyForDeploymentPostprocessing = 0;
+    };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+    00A121212121212121212121 /* Build Core */ = {
+      isa = PBXShellScriptBuildPhase;
+      buildActionMask = 2147483647;
+      files = (
+      );
+      inputPaths = (
+      );
+      name = "Build Core";
+      outputPaths = (
+      );
+      runOnlyForDeploymentPostprocessing = 0;
+      shellPath = /bin/sh;
+      shellScript = "bash \"${SRCROOT}/../build/build-core.sh\"";
+    };
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXGroup section */
+    00A333333333333333333333 = {
+      isa = PBXGroup;
+      children = (
+        00A333333333333333333334 /* Prodigeetor */,
+        00A333333333333333333335 /* Products */,
+      );
+      sourceTree = "<group>";
+    };
+    00A333333333333333333334 /* Prodigeetor */ = {
+      isa = PBXGroup;
+      children = (
+        00A000000000000000000001 /* AppDelegate.swift */,
+        00A000000000000000000002 /* MainViewController.swift */,
+        00A000000000000000000006 /* Info.plist */,
+        00A333333333333333333336 /* Bridge */,
+      );
+      path = Prodigeetor;
+      sourceTree = "<group>";
+    };
+    00A333333333333333333336 /* Bridge */ = {
+      isa = PBXGroup;
+      children = (
+        00A000000000000000000003 /* CoreBridge.mm */,
+        00A000000000000000000004 /* CoreBridge.h */,
+        00A000000000000000000007 /* CoreTextRenderer.mm */,
+        00A000000000000000000008 /* CoreTextRenderer.h */,
+        00A000000000000000000009 /* EditorView.mm */,
+        00A00000000000000000000A /* EditorView.h */,
+        00A000000000000000000005 /* Prodigeetor-Bridging-Header.h */,
+      );
+      path = Bridge;
+      sourceTree = "<group>";
+    };
+    00A333333333333333333335 /* Products */ = {
+      isa = PBXGroup;
+      children = (
+        00A000000000000000000000 /* Prodigeetor.app */,
+      );
+      sourceTree = "<group>";
+    };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+    00A444444444444444444444 /* Prodigeetor */ = {
+      isa = PBXNativeTarget;
+      buildConfigurationList = 00A555555555555555555555 /* Build configuration list for PBXNativeTarget "Prodigeetor" */;
+      buildPhases = (
+        00A121212121212121212121 /* Build Core */,
+        00A666666666666666666666 /* Sources */,
+        00A222222222222222222222 /* Frameworks */,
+      );
+      buildRules = (
+      );
+      dependencies = (
+      );
+      name = Prodigeetor;
+      productName = Prodigeetor;
+      productReference = 00A000000000000000000000 /* Prodigeetor.app */;
+      productType = "com.apple.product-type.application";
+    };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+    00A777777777777777777777 /* Project object */ = {
+      isa = PBXProject;
+      attributes = {
+        BuildIndependentTargetsInParallel = 1;
+        LastSwiftUpdateCheck = 1500;
+        LastUpgradeCheck = 1500;
+        TargetAttributes = {
+          00A444444444444444444444 = {
+            CreatedOnToolsVersion = 15.0;
+          };
+        };
+      };
+      buildConfigurationList = 00A888888888888888888888 /* Build configuration list for PBXProject "Prodigeetor" */;
+      compatibilityVersion = "Xcode 14.0";
+      developmentRegion = en;
+      hasScannedForEncodings = 0;
+      knownRegions = (
+        en,
+      );
+      mainGroup = 00A333333333333333333333;
+      productRefGroup = 00A333333333333333333335 /* Products */;
+      projectDirPath = "";
+      projectRoot = "";
+      targets = (
+        00A444444444444444444444 /* Prodigeetor */,
+      );
+    };
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+    00A666666666666666666666 /* Sources */ = {
+      isa = PBXSourcesBuildPhase;
+      buildActionMask = 2147483647;
+      files = (
+        00A111111111111111111111 /* AppDelegate.swift in Sources */,
+        00A111111111111111111112 /* MainViewController.swift in Sources */,
+        00A111111111111111111113 /* CoreBridge.mm in Sources */,
+        00A111111111111111111114 /* CoreTextRenderer.mm in Sources */,
+        00A111111111111111111115 /* EditorView.mm in Sources */,
+      );
+      runOnlyForDeploymentPostprocessing = 0;
+    };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+    00A999999999999999999991 /* Debug */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+        CLANG_CXX_LIBRARY = "libc++";
+        CLANG_ENABLE_MODULES = YES;
+        CODE_SIGN_IDENTITY = "-";
+        CURRENT_PROJECT_VERSION = 1;
+        DEBUG_INFORMATION_FORMAT = dwarf;
+        ENABLE_HARDENED_RUNTIME = YES;
+        GCC_OPTIMIZATION_LEVEL = 0;
+        HEADER_SEARCH_PATHS = (
+          "$(SRCROOT)/../core/include",
+        );
+        INFOPLIST_FILE = "Prodigeetor/Info.plist";
+        LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+        LIBRARY_SEARCH_PATHS = (
+          "$(SRCROOT)/../build/core",
+        );
+        MACOSX_DEPLOYMENT_TARGET = 13.0;
+        OTHER_LDFLAGS = (
+          "-lprodigeetor_core",
+        );
+        PRODUCT_BUNDLE_IDENTIFIER = com.prodigeetor.editor;
+        PRODUCT_NAME = "$(TARGET_NAME)";
+        SWIFT_OBJC_BRIDGING_HEADER = "Prodigeetor/Bridge/Prodigeetor-Bridging-Header.h";
+        SWIFT_VERSION = 5.0;
+      };
+      name = Debug;
+    };
+    00A999999999999999999992 /* Release */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+        CLANG_CXX_LIBRARY = "libc++";
+        CLANG_ENABLE_MODULES = YES;
+        CODE_SIGN_IDENTITY = "-";
+        CURRENT_PROJECT_VERSION = 1;
+        DEBUG_INFORMATION_FORMAT = dwarf;
+        ENABLE_HARDENED_RUNTIME = YES;
+        GCC_OPTIMIZATION_LEVEL = 3;
+        HEADER_SEARCH_PATHS = (
+          "$(SRCROOT)/../core/include",
+        );
+        INFOPLIST_FILE = "Prodigeetor/Info.plist";
+        LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+        LIBRARY_SEARCH_PATHS = (
+          "$(SRCROOT)/../build/core",
+        );
+        MACOSX_DEPLOYMENT_TARGET = 13.0;
+        OTHER_LDFLAGS = (
+          "-lprodigeetor_core",
+        );
+        PRODUCT_BUNDLE_IDENTIFIER = com.prodigeetor.editor;
+        PRODUCT_NAME = "$(TARGET_NAME)";
+        SWIFT_OBJC_BRIDGING_HEADER = "Prodigeetor/Bridge/Prodigeetor-Bridging-Header.h";
+        SWIFT_VERSION = 5.0;
+      };
+      name = Release;
+    };
+    00A999999999999999999993 /* Debug */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CODE_SIGN_IDENTITY = "-";
+        DEVELOPMENT_TEAM = "";
+        ENABLE_HARDENED_RUNTIME = YES;
+        MACOSX_DEPLOYMENT_TARGET = 13.0;
+        PRODUCT_BUNDLE_IDENTIFIER = com.prodigeetor.editor;
+        PRODUCT_NAME = "$(TARGET_NAME)";
+      };
+      name = Debug;
+    };
+    00A999999999999999999994 /* Release */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        CODE_SIGN_IDENTITY = "-";
+        DEVELOPMENT_TEAM = "";
+        ENABLE_HARDENED_RUNTIME = YES;
+        MACOSX_DEPLOYMENT_TARGET = 13.0;
+        PRODUCT_BUNDLE_IDENTIFIER = com.prodigeetor.editor;
+        PRODUCT_NAME = "$(TARGET_NAME)";
+      };
+      name = Release;
+    };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+    00A555555555555555555555 /* Build configuration list for PBXNativeTarget "Prodigeetor" */ = {
+      isa = XCConfigurationList;
+      buildConfigurations = (
+        00A999999999999999999991 /* Debug */,
+        00A999999999999999999992 /* Release */,
+      );
+      defaultConfigurationIsVisible = 0;
+      defaultConfigurationName = Release;
+    };
+    00A888888888888888888888 /* Build configuration list for PBXProject "Prodigeetor" */ = {
+      isa = XCConfigurationList;
+      buildConfigurations = (
+        00A999999999999999999993 /* Debug */,
+        00A999999999999999999994 /* Release */,
+      );
+      defaultConfigurationIsVisible = 0;
+      defaultConfigurationName = Release;
+    };
+/* End XCConfigurationList section */
+  };
+  rootObject = 00A777777777777777777777 /* Project object */;
+}

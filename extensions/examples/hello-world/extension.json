@@ -1,0 +1,17 @@
+{
+  "id": "hello-world",
+  "name": "Hello World",
+  "version": "0.1.0",
+  "publisher": "prodigeetor",
+  "main": "dist/index.js",
+  "activationEvents": ["onCommand:helloWorld"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "helloWorld",
+        "title": "Hello World: Insert Greeting"
+      }
+    ]
+  },
+  "permissions": ["fs_read"]
+}

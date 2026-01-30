@@ -1,0 +1,12 @@
+{
+  "name": "prodigeetor-hello-world",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}
