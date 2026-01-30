@@ -127,8 +127,8 @@ static std::string resolveResourcePath(NSString *relativePath) {
   _displayTimer = [NSTimer scheduledTimerWithTimeInterval:(1.0 / 60.0)
                                                    target:self
                                                  selector:@selector(onDisplayTick)
-                                                    repeats:YES
-                                                   userInfo:nil];
+                                                 userInfo:nil
+                                                  repeats:YES];
 }
 
 - (void)stopDisplayLoop {
@@ -195,6 +195,14 @@ static std::string resolveResourcePath(NSString *relativePath) {
 - (void)setThemePath:(NSString *)path {
   _themePath = [path copy];
   [self reloadThemeIfNeeded:YES];
+}
+
+- (void)scrollToTop {
+  _scrollOffsetY = 0.0;
+  if (self.enclosingScrollView) {
+    [self.enclosingScrollView.documentView scrollPoint:NSMakePoint(0, 0)];
+  }
+  [self setNeedsDisplay:YES];
 }
 
 - (void)reloadThemeIfNeeded:(BOOL)force {
@@ -381,6 +389,37 @@ static std::string resolveResourcePath(NSString *relativePath) {
   [self updateSelectionWithCursor:extendSelection];
 }
 
+- (void)moveCursorUp:(BOOL)extendSelection {
+  NSArray<NSNumber *> *pos = [self.coreBridge positionAtOffset:_cursorOffset];
+  NSInteger line = pos[0].integerValue;
+  NSInteger column = pos[1].integerValue;
+  if (line > 0) {
+    line -= 1;
+    NSInteger lineColumns = [self.coreBridge lineGraphemeCount:line];
+    if (column > lineColumns) {
+      column = lineColumns;
+    }
+  }
+  _cursorOffset = [self.coreBridge offsetAtLine:line column:column];
+  [self updateSelectionWithCursor:extendSelection];
+}
+
+- (void)moveCursorDown:(BOOL)extendSelection {
+  NSArray<NSNumber *> *pos = [self.coreBridge positionAtOffset:_cursorOffset];
+  NSInteger line = pos[0].integerValue;
+  NSInteger column = pos[1].integerValue;
+  NSInteger lineCount = [self.coreBridge lineCount];
+  if (line + 1 < lineCount) {
+    line += 1;
+    NSInteger lineColumns = [self.coreBridge lineGraphemeCount:line];
+    if (column > lineColumns) {
+      column = lineColumns;
+    }
+  }
+  _cursorOffset = [self.coreBridge offsetAtLine:line column:column];
+  [self updateSelectionWithCursor:extendSelection];
+}
+
 - (void)keyDown:(NSEvent *)event {
   BOOL extend = (event.modifierFlags & NSEventModifierFlagShift) == NSEventModifierFlagShift;
   if ((event.modifierFlags & NSEventModifierFlagCommand) == NSEventModifierFlagCommand) {
@@ -395,6 +434,17 @@ static std::string resolveResourcePath(NSString *relativePath) {
       return;
     case 124: // right arrow
       [self moveCursorRight:extend];
+      return;
+    case 125: // down arrow
+      [self moveCursorDown:extend];
+      return;
+    case 126: // up arrow
+      [self moveCursorUp:extend];
+      return;
+    case 36: // return/enter
+    case 76: // numpad enter
+      _cursorOffset = [self.coreBridge insertText:@"\n" atOffset:_cursorOffset];
+      [self updateSelectionWithCursor:NO];
       return;
     case 51: // delete/backspace
       _cursorOffset = [self.coreBridge deleteBackwardFromOffset:_cursorOffset];
@@ -442,7 +492,8 @@ static std::string resolveResourcePath(NSString *relativePath) {
   }
 
   NSRect selectionRect = NSMakeRect(xStart, y, xEnd - xStart, _lineHeight);
-  [[NSColor selectedTextBackgroundColor] setFill];
+  // Draw semi-transparent selection overlay on top of text
+  [[NSColor colorWithCalibratedRed:0.3 green:0.5 blue:0.8 alpha:0.4] setFill];
   NSRectFillUsingOperation(selectionRect, NSCompositingOperationSourceOver);
 }
 
@@ -494,12 +545,13 @@ static std::string resolveResourcePath(NSString *relativePath) {
   CGFloat y = 8.0 - offset;
   for (NSInteger i = startLine; i < lineCount && y < self.bounds.size.height; i++) {
     NSString *line = [self.coreBridge lineTextAt:i];
-    [self drawSelectionForLine:i lineText:line y:y];
 
     std::string lineText = std::string([line UTF8String]);
     std::vector<prodigeetor::RenderSpan> spans = _highlighter.highlight(lineText);
     prodigeetor::LineLayout layout = _renderer.layout_line(lineText, spans);
     _renderer.draw_line(layout, 8.0f, static_cast<float>(y));
+
+    [self drawSelectionForLine:i lineText:line y:y];
     [self drawCaretForLine:i lineText:line y:y];
     y += _lineHeight;
   }

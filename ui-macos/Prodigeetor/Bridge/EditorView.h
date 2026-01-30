@@ -10,6 +10,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)setEditorFont:(NSString *)family size:(CGFloat)size;
 - (void)setFilePath:(NSString *)path;
 - (void)setThemePath:(NSString *)path;
+- (void)scrollToTop;
 
 @end
 

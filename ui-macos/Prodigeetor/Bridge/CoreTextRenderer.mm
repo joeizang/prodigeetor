@@ -89,13 +89,15 @@ LayoutMetrics CoreTextRenderer::measure_line(const std::string &text) {
                                                 false);
   const void *keys[] = {kCTFontAttributeName, kCTLigatureAttributeName};
   int ligature = m_ligatures ? 1 : 0;
-  const void *values[] = {m_font, &ligature};
+  CFNumberRef ligature_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &ligature);
+  const void *values[] = {m_font, ligature_num};
   CFDictionaryRef attrs = CFDictionaryCreate(kCFAllocatorDefault,
                                              keys,
                                              values,
                                              2,
                                              &kCFTypeDictionaryKeyCallBacks,
                                              &kCFTypeDictionaryValueCallBacks);
+  CFRelease(ligature_num);
   CFAttributedStringRef attr = CFAttributedStringCreate(kCFAllocatorDefault, cf_text, attrs);
   CTLineRef line = CTLineCreateWithAttributedString(attr);
   CGFloat ascent = 0;
@@ -138,15 +140,24 @@ void CoreTextRenderer::draw_line(const LineLayout &layout, float x, float y) {
   CFMutableAttributedStringRef attr = CFAttributedStringCreateMutable(kCFAllocatorDefault, 0);
   CFAttributedStringReplaceString(attr, CFRangeMake(0, 0), cf_text);
 
-  const void *base_keys[] = {kCTFontAttributeName, kCTLigatureAttributeName};
+  // Set default text color (light gray #d8dee9 from YukiNord theme)
+  CGFloat default_components[4] = {0.847, 0.871, 0.914, 1.0}; // #d8dee9
+  CGColorSpaceRef default_space = CGColorSpaceCreateDeviceRGB();
+  CGColorRef default_color = CGColorCreate(default_space, default_components);
+
+  const void *base_keys[] = {kCTFontAttributeName, kCTLigatureAttributeName, kCTForegroundColorAttributeName};
   int base_ligature = m_ligatures ? 1 : 0;
-  const void *base_values[] = {m_font, &base_ligature};
+  CFNumberRef base_ligature_num = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &base_ligature);
+  const void *base_values[] = {m_font, base_ligature_num, default_color};
   CFDictionaryRef base_attrs = CFDictionaryCreate(kCFAllocatorDefault,
                                                   base_keys,
                                                   base_values,
-                                                  2,
+                                                  3,
                                                   &kCFTypeDictionaryKeyCallBacks,
                                                   &kCFTypeDictionaryValueCallBacks);
+  CFRelease(base_ligature_num);
+  CGColorRelease(default_color);
+  CGColorSpaceRelease(default_space);
   CFAttributedStringSetAttributes(attr, CFRangeMake(0, CFStringGetLength(cf_text)), base_attrs, false);
 
   for (const auto &span : layout.spans) {
@@ -172,6 +183,8 @@ void CoreTextRenderer::draw_line(const LineLayout &layout, float x, float y) {
   CTLineRef line = CTLineCreateWithAttributedString(attr);
 
   CGContextSaveGState(m_context);
+  // Flip the coordinate system for Core Text (it uses bottom-left origin, NSView uses top-left)
+  CGContextSetTextMatrix(m_context, CGAffineTransformMakeScale(1.0, -1.0));
   CGContextSetTextPosition(m_context, x, y + layout.metrics.baseline);
   CTLineDraw(line, m_context);
   CGContextRestoreGState(m_context);

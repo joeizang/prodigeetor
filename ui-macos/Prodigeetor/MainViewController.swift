@@ -54,7 +54,9 @@ final class MainViewController: NSViewController {
     panel.canChooseFiles = true
     panel.canChooseDirectories = false
     panel.allowsMultipleSelection = false
-    panel.allowedContentTypes = [.text, .sourceCode, .plainText]
+    // Allow all file types - be more permissive
+    panel.allowedContentTypes = []
+    panel.allowsOtherFileTypes = true
 
     panel.begin { [weak self] response in
       guard let self = self, response == .OK, let url = panel.url else { return }
@@ -64,6 +66,7 @@ final class MainViewController: NSViewController {
         self.coreBridge.setText(content)
         self.currentFilePath = url.path
         self.editorView?.setFilePath(url.path)
+        self.editorView?.scrollToTop()
         self.view.window?.title = "Prodigeetor - \(url.lastPathComponent)"
       } catch {
         let alert = NSAlert()

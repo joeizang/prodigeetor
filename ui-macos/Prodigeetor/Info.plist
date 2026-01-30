@@ -14,5 +14,7 @@
   <string>13.0</string>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
+  <key>NSMainNibFile</key>
+  <string></string>
 </dict>
 </plist>
