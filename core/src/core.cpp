@@ -1,7 +1,55 @@
 #include "core.h"
+#include <iostream>
 #include <string>
+#include <vector>
+#include <cstdlib>
+#include <unistd.h>
 
 namespace prodigeetor {
+
+// Helper function to find language server executable
+static std::string find_language_server(const std::string& command) {
+  // Try common locations
+  std::vector<std::string> search_paths;
+
+  // 1. Check if command is already absolute path
+  if (command[0] == '/' && access(command.c_str(), X_OK) == 0) {
+    std::cerr << "[LSP] Found language server: " << command << std::endl;
+    return command;
+  }
+
+  // 2. Get HOME directory
+  const char* home = getenv("HOME");
+  if (home) {
+    // NVM paths
+    search_paths.push_back(std::string(home) + "/.nvm/versions/node/v22.18.0/bin/" + command);
+    search_paths.push_back(std::string(home) + "/.nvm/current/bin/" + command);
+    // Global npm
+    search_paths.push_back(std::string(home) + "/.npm-global/bin/" + command);
+    // Homebrew
+    search_paths.push_back("/opt/homebrew/bin/" + command);
+    search_paths.push_back("/usr/local/bin/" + command);
+  }
+
+  // 3. System paths
+  search_paths.push_back("/usr/bin/" + command);
+
+  // Try each path
+  for (const auto& path : search_paths) {
+    if (access(path.c_str(), X_OK) == 0) {
+      std::cerr << "[LSP] Found language server: " << path << std::endl;
+      return path;
+    }
+  }
+
+  // Not found, return original command and let it fail with a clear error
+  std::cerr << "[LSP] WARNING: Could not find language server: " << command << std::endl;
+  std::cerr << "[LSP] Searched paths:" << std::endl;
+  for (const auto& path : search_paths) {
+    std::cerr << "[LSP]   - " << path << std::endl;
+  }
+  return command;
+}
 
 Core::Core() : m_lsp_manager(std::make_unique<lsp::LSPManager>()) {}
 
@@ -13,9 +61,11 @@ void Core::initialize() {
 }
 
 void Core::initialize_lsp(const std::string& root_path) {
+  std::cerr << "[LSP] Initializing LSP with root path: " << root_path << std::endl;
+
   // Register TypeScript/JavaScript language server
   lsp::LanguageServerConfig tsConfig;
-  tsConfig.command = "typescript-language-server";
+  tsConfig.command = find_language_server("typescript-language-server");
   tsConfig.args = {"--stdio"};
   tsConfig.extensions = {".ts", ".tsx", ".js", ".jsx"};
   tsConfig.languageId = "typescript";
@@ -23,7 +73,7 @@ void Core::initialize_lsp(const std::string& root_path) {
 
   // Register HTML language server
   lsp::LanguageServerConfig htmlConfig;
-  htmlConfig.command = "vscode-html-language-server";
+  htmlConfig.command = find_language_server("vscode-html-language-server");
   htmlConfig.args = {"--stdio"};
   htmlConfig.extensions = {".html", ".htm"};
   htmlConfig.languageId = "html";
@@ -31,13 +81,14 @@ void Core::initialize_lsp(const std::string& root_path) {
 
   // Register CSS language server
   lsp::LanguageServerConfig cssConfig;
-  cssConfig.command = "vscode-css-language-server";
+  cssConfig.command = find_language_server("vscode-css-language-server");
   cssConfig.args = {"--stdio"};
   cssConfig.extensions = {".css", ".scss", ".less"};
   cssConfig.languageId = "css";
   m_lsp_manager->registerLanguageServer("css", cssConfig);
 
   // Initialize all servers
+  std::cerr << "[LSP] Starting language servers..." << std::endl;
   m_lsp_manager->initializeServers("file://" + root_path);
 }
 

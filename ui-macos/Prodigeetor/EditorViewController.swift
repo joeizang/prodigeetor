@@ -7,6 +7,7 @@ final class EditorViewController: NSViewController {
   private(set) var currentFilePath: String?
   private(set) var displayName: String = "Untitled"
   private(set) var isDirty: Bool = false
+  private var lspInitialized: Bool = false
 
   // Callback for when the tab should be renamed
   var onTitleChanged: ((String) -> Void)?
@@ -62,6 +63,12 @@ final class EditorViewController: NSViewController {
     editorView?.scrollToTop()
     onTitleChanged?(displayName)
     onDirtyStateChanged?(isDirty)
+
+    // Initialize LSP if not already initialized (using file's parent directory as workspace)
+    if !lspInitialized {
+      let workspacePath = (path as NSString).deletingLastPathComponent
+      initializeLSP(workspacePath: workspacePath)
+    }
 
     // Notify LSP about opened file
     notifyLSPFileOpened()
@@ -154,7 +161,10 @@ final class EditorViewController: NSViewController {
   // MARK: - LSP Support
 
   func initializeLSP(workspacePath: String) {
-    coreBridge.initializeLSP(withWorkspace: workspacePath)
+    if !lspInitialized {
+      coreBridge.initializeLSP(withWorkspace: workspacePath)
+      lspInitialized = true
+    }
   }
 
   func tick() {

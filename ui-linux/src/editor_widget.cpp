@@ -17,6 +17,7 @@
 
 struct EditorState {
   prodigeetor::TextBuffer buffer;
+  std::unique_ptr<prodigeetor::Core> core;  // For LSP support
   prodigeetor::PangoRenderer renderer;
   prodigeetor::TreeSitterHighlighter highlighter;
   size_t cursor_offset = 0;
@@ -28,6 +29,8 @@ struct EditorState {
   GtkAdjustment *v_adjustment = nullptr;
   GtkWidget *viewport = nullptr;
   std::string theme_path = "themes/default.json";
+  std::string file_path;
+  bool lsp_initialized = false;
   GFileMonitor *theme_monitor = nullptr;
   prodigeetor::EditorSettings settings;
   std::string font_stack;
@@ -243,6 +246,25 @@ static prodigeetor::TreeSitterHighlighter::LanguageId language_for_path(const st
   return prodigeetor::TreeSitterHighlighter::LanguageId::JavaScript;
 }
 
+static std::string detect_language_id(const std::string &path) {
+  std::string lower = path;
+  std::transform(lower.begin(), lower.end(), lower.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  if (lower.ends_with(".ts")) return "typescript";
+  if (lower.ends_with(".tsx")) return "typescriptreact";
+  if (lower.ends_with(".js")) return "javascript";
+  if (lower.ends_with(".jsx")) return "javascriptreact";
+  if (lower.ends_with(".html") || lower.ends_with(".htm")) return "html";
+  if (lower.ends_with(".css")) return "css";
+  if (lower.ends_with(".scss")) return "scss";
+  if (lower.ends_with(".less")) return "less";
+  if (lower.ends_with(".swift")) return "swift";
+  if (lower.ends_with(".cs")) return "csharp";
+  if (lower.ends_with(".sql")) return "sql";
+  return "plaintext";
+}
+
 static void editor_set_cursor_from_point(EditorState *state, double x, double y, bool extend) {
   if (!state) {
     return;
@@ -289,6 +311,8 @@ GtkWidget *prodigeetor_editor_widget_new(void) {
   GtkWidget *area = gtk_drawing_area_new();
   auto *state = new EditorState();
   state->widget = area;
+  state->core = std::make_unique<prodigeetor::Core>();
+  state->core->initialize();
   state->settings = prodigeetor::SettingsLoader::load_from_file("settings/default.json");
   state->font_stack = state->settings.font_family;
   for (const auto &fallback : state->settings.font_fallbacks) {
@@ -372,7 +396,27 @@ void prodigeetor_editor_widget_set_file_path(GtkWidget *widget, const char *path
   if (!state || !path) {
     return;
   }
+  state->file_path = path;
   state->highlighter.set_language(language_for_path(path));
+
+  // Initialize LSP if not already initialized
+  if (!state->lsp_initialized && state->core) {
+    // Extract directory from file path
+    std::string workspace_path = path;
+    size_t last_slash = workspace_path.find_last_of('/');
+    if (last_slash != std::string::npos) {
+      workspace_path = workspace_path.substr(0, last_slash);
+    }
+    state->core->initialize_lsp(workspace_path);
+    state->lsp_initialized = true;
+
+    // Notify LSP about opened file
+    std::string uri = "file://" + std::string(path);
+    std::string language_id = detect_language_id(path);
+    std::string text = state->buffer.text();
+    state->core->open_file(uri, language_id);
+  }
+
   gtk_widget_queue_draw(widget);
 }
 
@@ -403,4 +447,12 @@ void prodigeetor_editor_widget_attach_scroll(GtkWidget *widget, GtkAdjustment *v
   }
   state->v_adjustment = vadj;
   state->viewport = viewport;
+}
+
+void prodigeetor_editor_widget_tick(GtkWidget *widget) {
+  auto *state = static_cast<EditorState *>(g_object_get_data(G_OBJECT(widget), "editor-state"));
+  if (!state || !state->core) {
+    return;
+  }
+  state->core->tick();
 }

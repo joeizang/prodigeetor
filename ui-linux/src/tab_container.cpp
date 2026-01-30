@@ -352,3 +352,16 @@ void prodigeetor_tab_container_set_title_callback(GtkWidget *container,
   state->title_callback = callback;
   state->title_callback_data = user_data;
 }
+
+void prodigeetor_tab_container_tick_all_editors(GtkWidget *container) {
+  auto *state = static_cast<TabContainerState *>(
+    g_object_get_data(G_OBJECT(container), "tab-container-state"));
+
+  if (!state) return;
+
+  for (const auto &tab : state->tabs) {
+    if (tab->editor) {
+      prodigeetor_editor_widget_tick(tab->editor);
+    }
+  }
+}

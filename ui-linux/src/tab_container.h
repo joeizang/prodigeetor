@@ -29,4 +29,7 @@ void prodigeetor_tab_container_set_title_callback(GtkWidget *container,
                                                    void (*callback)(const char *title, void *user_data),
                                                    void *user_data);
 
+// Process LSP messages for all editors
+void prodigeetor_tab_container_tick_all_editors(GtkWidget *container);
+
 G_END_DECLS

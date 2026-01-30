@@ -3,6 +3,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 
@@ -50,10 +51,12 @@ static std::string resolve_query_path(const std::string &relative_path) {
 
   for (const auto &path : search_paths) {
     if (std::filesystem::exists(path)) {
+      std::cerr << "[Highlighter] Found query file: " << path << std::endl;
       return path;
     }
   }
 
+  std::cerr << "[Highlighter] ERROR: Query file not found: " << relative_path << std::endl;
   return std::string();
 }
 
@@ -190,8 +193,11 @@ void TreeSitterHighlighter::set_language(LanguageId language) {
 
   std::string query_str = query_for_language(language);
   if (query_str.empty()) {
+    std::cerr << "[Highlighter] ERROR: Empty query string for language" << std::endl;
     return;
   }
+
+  std::cerr << "[Highlighter] Loading query (" << query_str.size() << " bytes)" << std::endl;
 
   uint32_t error_offset = 0;
   TSQueryError error_type = TSQueryErrorNone;
@@ -199,8 +205,17 @@ void TreeSitterHighlighter::set_language(LanguageId language) {
                                 static_cast<uint32_t>(query_str.size()),
                                 &error_offset, &error_type);
   if (error_type != TSQueryErrorNone) {
+    std::cerr << "[Highlighter] ERROR: Query parse failed at offset " << error_offset << ", error type: " << error_type << std::endl;
+    // Show some context around the error
+    if (error_offset < query_str.size()) {
+      size_t context_start = (error_offset > 50) ? error_offset - 50 : 0;
+      size_t context_end = std::min(static_cast<size_t>(error_offset) + 50, query_str.size());
+      std::cerr << "[Highlighter] Context: " << query_str.substr(context_start, context_end - context_start) << std::endl;
+    }
     ts_query_delete(query);
     query = nullptr;
+  } else {
+    std::cerr << "[Highlighter] Query loaded successfully, " << ts_query_capture_count(query) << " captures" << std::endl;
   }
   m_query = query;
 #else
@@ -218,18 +233,30 @@ std::vector<RenderSpan> TreeSitterHighlighter::highlight(const std::string &text
 #ifdef PRODIGEETOR_USE_TREE_SITTER
   TSParser *parser = static_cast<TSParser *>(m_parser);
   TSQuery *query = static_cast<TSQuery *>(m_query);
-  if (!parser || !query) {
+  if (!parser) {
+    std::cerr << "[Highlighter] ERROR: Parser is null, cannot highlight" << std::endl;
+    return spans;
+  }
+  if (!query) {
+    std::cerr << "[Highlighter] WARNING: Query is null, returning no spans (text will use default color)" << std::endl;
     return spans;
   }
 
   TSTree *tree = ts_parser_parse_string(parser, nullptr, text.c_str(), static_cast<uint32_t>(text.size()));
+  if (!tree) {
+    std::cerr << "[Highlighter] ERROR: Failed to parse text" << std::endl;
+    return spans;
+  }
+
   TSNode root = ts_tree_root_node(tree);
 
   TSQueryCursor *cursor = ts_query_cursor_new();
   ts_query_cursor_exec(cursor, query, root);
 
   TSQueryMatch match;
+  uint32_t match_count = 0;
   while (ts_query_cursor_next_match(cursor, &match)) {
+    match_count++;
     for (uint32_t i = 0; i < match.capture_count; ++i) {
       TSQueryCapture capture = match.captures[i];
       TSNode node = capture.node;
@@ -250,6 +277,8 @@ std::vector<RenderSpan> TreeSitterHighlighter::highlight(const std::string &text
       spans.push_back(span);
     }
   }
+
+  std::cerr << "[Highlighter] Generated " << spans.size() << " spans from " << match_count << " matches" << std::endl;
 
   ts_query_cursor_delete(cursor);
   ts_tree_delete(tree);

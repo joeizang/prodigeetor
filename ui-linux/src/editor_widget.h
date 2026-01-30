@@ -10,5 +10,6 @@ char *prodigeetor_editor_widget_get_text(GtkWidget *widget);
 void prodigeetor_editor_widget_set_file_path(GtkWidget *widget, const char *path);
 void prodigeetor_editor_widget_set_theme_path(GtkWidget *widget, const char *path);
 void prodigeetor_editor_widget_attach_scroll(GtkWidget *widget, GtkAdjustment *vadj, GtkWidget *viewport);
+void prodigeetor_editor_widget_tick(GtkWidget *widget);
 
 G_END_DECLS

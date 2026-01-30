@@ -304,3 +304,17 @@ void prodigeetor_split_container_set_window(GtkWidget *container, GtkWidget *win
     state->window = window;
   }
 }
+
+void prodigeetor_split_container_tick_all_editors(GtkWidget *container) {
+  auto *state = static_cast<SplitContainerState *>(
+    g_object_get_data(G_OBJECT(container), "split-container-state"));
+
+  if (!state) return;
+
+  // Tick all tab containers
+  for (const auto &tab_container : state->tab_containers) {
+    if (tab_container) {
+      prodigeetor_tab_container_tick_all_editors(tab_container);
+    }
+  }
+}

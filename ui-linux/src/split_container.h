@@ -26,4 +26,7 @@ void prodigeetor_split_container_select_tab(GtkWidget *container, int index);
 // Set window reference
 void prodigeetor_split_container_set_window(GtkWidget *container, GtkWidget *window);
 
+// Process LSP messages for all editors
+void prodigeetor_split_container_tick_all_editors(GtkWidget *container);
+
 G_END_DECLS

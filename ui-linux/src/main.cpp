@@ -63,6 +63,14 @@ static gboolean on_key_pressed(GtkEventControllerKey *, guint keyval, guint, Gdk
   return FALSE;
 }
 
+static gboolean lsp_tick_timer(gpointer user_data) {
+  auto *data = static_cast<AppData *>(user_data);
+  if (data && data->split_container) {
+    prodigeetor_split_container_tick_all_editors(data->split_container);
+  }
+  return G_SOURCE_CONTINUE;
+}
+
 static void on_activate(GApplication *app, gpointer) {
   auto *data = new AppData();
 
@@ -85,6 +93,10 @@ static void on_activate(GApplication *app, gpointer) {
   g_object_set_data_full(G_OBJECT(window), "app-data", data, [](gpointer ptr) {
     delete static_cast<AppData *>(ptr);
   });
+
+  // Setup LSP tick timer (60fps)
+  g_timeout_add(16, lsp_tick_timer, data);
+
   gtk_window_present(window);
 }
 
